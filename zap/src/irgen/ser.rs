@@ -221,7 +221,7 @@ impl Ser {
 				self.push_ty(key, key_name.as_str().into());
 
 				self.push_stmt(Stmt::End);
-				
+
 				self.push_stmt(Stmt::Call(
 					Var::from("buffer").nindex("writeu16"),
 					None,
