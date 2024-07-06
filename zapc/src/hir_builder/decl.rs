@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use ariadne::Fmt;
 use lasso::Spur;
 
 use crate::{
@@ -184,6 +183,7 @@ impl<'a> HirBuilder<'a> {
 					value_span: span,
 					expected_values: "\"client\" or \"server\"".to_string(),
 					found_type: "boolean".to_string(),
+					help: None,
 				});
 
 				HirEventSource::Server
@@ -194,28 +194,42 @@ impl<'a> HirBuilder<'a> {
 					value_span: number.span(),
 					expected_values: "\"client\" or \"server\"".to_string(),
 					found_type: "number".to_string(),
+					help: None,
 				});
 
 				HirEventSource::Server
 			}
 
 			AstConfigValue::Path(words) => {
-				// if words.len() == 1 {
-				// 	let word = words.first().unwrap().word(self.rodeo);
+				if words.len() == 1 {
+					let word = words.first().unwrap().word(self.rodeo);
 
-				// 	if word == "server" || word == "Server" {
-				// 		// todo: report special error
-				// 	} else if word == "client" || word == "Client" {
-				// 		// todo: report special error
-				// 	}
-				// } else {
-				// 	// todo: report error
-				// }
+					if word == "server" || word == "client" {
+						self.report(Report::ExpectedValueWrongType {
+							value_span: words.first().unwrap().span().merge(words.last().unwrap().span()),
+							expected_values: "\"client\" or \"server\"".to_string(),
+							found_type: "path".to_string(),
+							help: Some("add quotes to turn the path into a string".to_string()),
+						});
+
+						return HirEventSource::Server;
+					} else if word == "Server" || word == "client" {
+						self.report(Report::ExpectedValueWrongType {
+							value_span: words.first().unwrap().span().merge(words.last().unwrap().span()),
+							expected_values: "\"client\" or \"server\"".to_string(),
+							found_type: "path".to_string(),
+							help: Some("lowercase the word and add quotes to turn the path into a string".to_string()),
+						});
+
+						return HirEventSource::Server;
+					}
+				}
 
 				self.report(Report::ExpectedValueWrongType {
 					value_span: words.first().unwrap().span().merge(words.last().unwrap().span()),
 					expected_values: "\"client\" or \"server\"".to_string(),
 					found_type: "path".to_string(),
+					help: None,
 				});
 
 				HirEventSource::Server
@@ -286,7 +300,8 @@ impl<'a> HirBuilder<'a> {
 
 			AstConfigValue::Number(number) => {
 				if number.value().is_sign_negative() {
-					// todo: report error
+					self.report(Report::ExpectedPositiveNumber { value_span: ast.span() });
+
 					HirRemoteBatching::None
 				} else {
 					HirRemoteBatching::MaxTime(number.value())
@@ -304,7 +319,6 @@ impl<'a> HirBuilder<'a> {
 			}
 
 			AstConfigValue::Path(_) => {
-				// todo: potential special error
 				self.report(Report::ExpectedType {
 					value_span: ast.span(),
 					expected_type: "`boolean` or `number`".to_string(),

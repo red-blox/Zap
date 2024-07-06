@@ -38,6 +38,14 @@ pub enum Report {
 		char: char,
 	},
 
+	UnknownType {
+		type_span: Span,
+	},
+
+	UnknownRemote {
+		remote_span: Span,
+	},
+
 	ExpectedTokenFound {
 		expected: Vec<String>,
 		found: String,
@@ -101,12 +109,17 @@ pub enum Report {
 		value_span: Span,
 		found_type: String,
 		expected_values: String,
+		help: Option<String>,
 	},
 
 	ExpectedType {
 		value_span: Span,
 		expected_type: String,
 		found_type: String,
+	},
+
+	ExpectedPositiveNumber {
+		value_span: Span,
 	},
 
 	IncorrectGenericCount {
@@ -135,6 +148,8 @@ impl Report {
 	pub fn kind(&self) -> ReportKind {
 		match self {
 			Self::UnknownCharacter { .. } => ReportKind::Error,
+			Self::UnknownType { .. } => ReportKind::Error,
+			Self::UnknownRemote { .. } => ReportKind::Error,
 			Self::ExpectedTokenFound { .. } => ReportKind::Error,
 			Self::InvalidRange { .. } => ReportKind::Error,
 			Self::ExpectedIntegerFoundNumber { .. } => ReportKind::Error,
@@ -147,6 +162,7 @@ impl Report {
 			Self::ExpectedValue { .. } => ReportKind::Error,
 			Self::ExpectedValueWrongType { .. } => ReportKind::Error,
 			Self::ExpectedType { .. } => ReportKind::Error,
+			Self::ExpectedPositiveNumber { .. } => ReportKind::Error,
 			Self::IncorrectGenericCount { .. } => ReportKind::Error,
 		}
 	}
@@ -162,6 +178,14 @@ impl Report {
 						.with_color(ERROR)
 						.with_message(format!("unknown character {}", ticks(char).fg(ERROR))),
 				),
+
+			Self::UnknownType { type_span } => build(kind, type_span)
+				.with_message("unknown type")
+				.with_label(label(type_span).with_color(ERROR)),
+
+			Self::UnknownRemote { remote_span } => build(kind, remote_span)
+				.with_message("unknown remote")
+				.with_label(label(remote_span).with_color(ERROR)),
 
 			Self::ExpectedTokenFound {
 				expected,
@@ -287,15 +311,24 @@ impl Report {
 				value_span,
 				found_type,
 				expected_values,
-			} => build(kind, value_span).with_message("invalid value").with_label(
-				label(value_span)
-					.with_message(format!(
-						"expected {}, found {}",
-						expected_values,
-						ticks(found_type).fg(ERROR)
-					))
-					.with_color(ERROR),
-			),
+				help,
+			} => {
+				let builder = build(kind, value_span).with_message("invalid value").with_label(
+					label(value_span)
+						.with_message(format!(
+							"expected {}, found {}",
+							expected_values,
+							ticks(found_type).fg(ERROR)
+						))
+						.with_color(ERROR),
+				);
+
+				if let Some(help) = help {
+					builder.with_help(help)
+				} else {
+					builder
+				}
+			}
 
 			Self::ExpectedType {
 				value_span,
@@ -310,6 +343,10 @@ impl Report {
 					))
 					.with_color(ERROR),
 			),
+
+			Self::ExpectedPositiveNumber { value_span } => build(kind, value_span)
+				.with_message("expected positive number")
+				.with_label(label(value_span).with_color(ERROR)),
 
 			Self::IncorrectGenericCount {
 				type_span,
