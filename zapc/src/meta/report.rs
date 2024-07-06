@@ -122,6 +122,16 @@ pub enum Report {
 		value_span: Span,
 	},
 
+	ExpectedTypeFoundScope {
+		scope_span: Span,
+		found_scope: String,
+	},
+
+	ExpectedRemoteFoundScope {
+		scope_span: Span,
+		found_scope: String,
+	},
+
 	IncorrectGenericCount {
 		type_span: Span,
 		type_name: String,
@@ -162,6 +172,8 @@ impl Report {
 			Self::ExpectedValue { .. } => ReportKind::Error,
 			Self::ExpectedValueWrongType { .. } => ReportKind::Error,
 			Self::ExpectedType { .. } => ReportKind::Error,
+			Self::ExpectedTypeFoundScope { .. } => ReportKind::Error,
+			Self::ExpectedRemoteFoundScope { .. } => ReportKind::Error,
 			Self::ExpectedPositiveNumber { .. } => ReportKind::Error,
 			Self::IncorrectGenericCount { .. } => ReportKind::Error,
 		}
@@ -343,6 +355,20 @@ impl Report {
 					))
 					.with_color(ERROR),
 			),
+
+			Self::ExpectedTypeFoundScope {
+				scope_span,
+				found_scope,
+			} => build(kind, scope_span)
+				.with_message(format!("expected type, found scope {}", ticks(found_scope).fg(ERROR)))
+				.with_label(label(scope_span).with_color(ERROR)),
+
+			Self::ExpectedRemoteFoundScope {
+				scope_span,
+				found_scope,
+			} => build(kind, scope_span)
+				.with_message(format!("expected remote, found scope {}", ticks(found_scope).fg(ERROR)))
+				.with_label(label(scope_span).with_color(ERROR)),
 
 			Self::ExpectedPositiveNumber { value_span } => build(kind, value_span)
 				.with_message("expected positive number")

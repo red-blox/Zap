@@ -7,7 +7,7 @@ use crate::{
 		scope::HirScope,
 		ty::HirTy,
 	},
-	meta::Span,
+	meta::{Report, Span},
 };
 
 use super::HirBuilder;
@@ -85,7 +85,10 @@ impl<'a> HirBuilder<'a> {
 		match spurs.first() {
 			Some(init) if self.rodeo.get_or_intern_static("init") == *init => {
 				if spurs.len() == 1 {
-					// todo: report error
+					self.report(Report::ExpectedTypeFoundScope {
+						scope_span: span,
+						found_scope: "init".to_string(),
+					});
 
 					HirTyDeclId(0)
 				} else {
@@ -142,7 +145,10 @@ impl<'a> HirBuilder<'a> {
 		match spurs.first() {
 			Some(init) if self.rodeo.get_or_intern_static("init") == *init => {
 				if spurs.len() == 1 {
-					// todo: report error
+					self.report(Report::ExpectedRemoteFoundScope {
+						scope_span: span,
+						found_scope: "init".to_string(),
+					});
 
 					HirRemoteId(0)
 				} else {
