@@ -168,9 +168,8 @@ impl<'a> HirBuilder<'a> {
 				"server" => HirEventSource::Server,
 				"client" => HirEventSource::Client,
 				_ => {
-					self.report(Report::ExpectedValue {
+					self.report(Report::ExpectedFromValue {
 						value_span: string.span(),
-						expected_values: "\"client\" or \"server\"".to_string(),
 						found: format!("\"{}\"", string.string(self.rodeo)),
 					});
 
@@ -179,9 +178,8 @@ impl<'a> HirBuilder<'a> {
 			},
 
 			AstConfigValue::Boolean(_, span) => {
-				self.report(Report::ExpectedValueWrongType {
+				self.report(Report::ExpectedFromValueWrongType {
 					value_span: span,
-					expected_values: "\"client\" or \"server\"".to_string(),
 					found_type: "boolean".to_string(),
 					help: None,
 				});
@@ -190,9 +188,8 @@ impl<'a> HirBuilder<'a> {
 			}
 
 			AstConfigValue::Number(number) => {
-				self.report(Report::ExpectedValueWrongType {
+				self.report(Report::ExpectedFromValueWrongType {
 					value_span: number.span(),
-					expected_values: "\"client\" or \"server\"".to_string(),
 					found_type: "number".to_string(),
 					help: None,
 				});
@@ -205,18 +202,16 @@ impl<'a> HirBuilder<'a> {
 					let word = words.first().unwrap().word(self.rodeo);
 
 					if word == "server" || word == "client" {
-						self.report(Report::ExpectedValueWrongType {
+						self.report(Report::ExpectedFromValueWrongType {
 							value_span: words.first().unwrap().span().merge(words.last().unwrap().span()),
-							expected_values: "\"client\" or \"server\"".to_string(),
 							found_type: "path".to_string(),
 							help: Some("add quotes to turn the path into a string".to_string()),
 						});
 
 						return HirEventSource::Server;
 					} else if word == "Server" || word == "client" {
-						self.report(Report::ExpectedValueWrongType {
+						self.report(Report::ExpectedFromValueWrongType {
 							value_span: words.first().unwrap().span().merge(words.last().unwrap().span()),
-							expected_values: "\"client\" or \"server\"".to_string(),
 							found_type: "path".to_string(),
 							help: Some("lowercase the word and add quotes to turn the path into a string".to_string()),
 						});
@@ -225,9 +220,8 @@ impl<'a> HirBuilder<'a> {
 					}
 				}
 
-				self.report(Report::ExpectedValueWrongType {
+				self.report(Report::ExpectedFromValueWrongType {
 					value_span: words.first().unwrap().span().merge(words.last().unwrap().span()),
-					expected_values: "\"client\" or \"server\"".to_string(),
 					found_type: "path".to_string(),
 					help: None,
 				});

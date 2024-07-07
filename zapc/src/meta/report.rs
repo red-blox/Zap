@@ -99,16 +99,14 @@ pub enum Report {
 		decl_kind: String,
 	},
 
-	ExpectedValue {
+	ExpectedFromValue {
 		value_span: Span,
 		found: String,
-		expected_values: String,
 	},
 
-	ExpectedValueWrongType {
+	ExpectedFromValueWrongType {
 		value_span: Span,
 		found_type: String,
-		expected_values: String,
 		help: Option<String>,
 	},
 
@@ -169,8 +167,8 @@ impl Report {
 			Self::DuplicateField { .. } => ReportKind::Error,
 			Self::UnexpectedField { .. } => ReportKind::Error,
 			Self::ExpectedField { .. } => ReportKind::Error,
-			Self::ExpectedValue { .. } => ReportKind::Error,
-			Self::ExpectedValueWrongType { .. } => ReportKind::Error,
+			Self::ExpectedFromValue { .. } => ReportKind::Error,
+			Self::ExpectedFromValueWrongType { .. } => ReportKind::Error,
 			Self::ExpectedType { .. } => ReportKind::Error,
 			Self::ExpectedTypeFoundScope { .. } => ReportKind::Error,
 			Self::ExpectedRemoteFoundScope { .. } => ReportKind::Error,
@@ -309,27 +307,23 @@ impl Report {
 						.with_color(ERROR),
 				),
 
-			Self::ExpectedValue {
-				value_span,
-				found,
-				expected_values,
-			} => build(kind, value_span).with_message("invalid value").with_label(
-				label(value_span)
-					.with_message(format!("expected {}, found {}", expected_values, found.fg(ERROR)))
-					.with_color(ERROR),
-			),
+			Self::ExpectedFromValue { value_span, found } => {
+				build(kind, value_span).with_message("invalid value").with_label(
+					label(value_span)
+						.with_message(format!("expected \"client\" or \"server\", found {}", found.fg(ERROR)))
+						.with_color(ERROR),
+				)
+			}
 
-			Self::ExpectedValueWrongType {
+			Self::ExpectedFromValueWrongType {
 				value_span,
 				found_type,
-				expected_values,
 				help,
 			} => {
 				let builder = build(kind, value_span).with_message("invalid value").with_label(
 					label(value_span)
 						.with_message(format!(
-							"expected {}, found {}",
-							expected_values,
+							"expected \"client\" or \"server\", found {}",
 							ticks(found_type).fg(ERROR)
 						))
 						.with_color(ERROR),

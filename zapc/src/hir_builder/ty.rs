@@ -116,8 +116,10 @@ impl<'a> HirBuilder<'a> {
 
 	fn generics_one_range(&mut self, segment: &AstWord, generics: &[AstGeneric]) -> Option<AstRange> {
 		if generics.len() > 1 {
+			let type_span = segment.span().merge(generics.last().unwrap().span());
+
 			self.report(Report::IncorrectGenericCount {
-				type_span: segment.span(),
+				type_span,
 				type_name: segment.word(self.rodeo).to_string(),
 				generic_spans: generics.iter().map(|s| s.span()).collect::<Vec<_>>(),
 				generics_optional: true,
