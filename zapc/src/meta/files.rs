@@ -63,10 +63,7 @@ impl FileDatabase {
 impl Cache<FileId> for &mut FileDatabase {
 	type Storage = String;
 
-	fn fetch(
-		&mut self,
-		id: &FileId,
-	) -> Result<&Source<Self::Storage>, Box<dyn std::fmt::Debug + '_>> {
+	fn fetch(&mut self, id: &FileId) -> Result<&Source<Self::Storage>, Box<dyn std::fmt::Debug + '_>> {
 		Ok(self
 			.files
 			.get_mut(id.0)
