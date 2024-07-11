@@ -7,7 +7,7 @@ use crate::{
 		scope::HirScope,
 		ty::HirTy,
 	},
-	meta::Span,
+	meta::{Report, Span},
 };
 
 use super::HirBuilder;
@@ -70,8 +70,8 @@ impl<'a> HirBuilder<'a> {
 	pub fn add_ty_decl(&mut self, from: &ScopeId, name: Spur, span: Span, ty: HirTy) -> HirTyDeclId {
 		let id = self.get_or_create_ty_decl_id(from, name, span);
 
-		if let Resolved::Resolved(first_span, ..) = self.ty_decls[id.0] {
-			// todo: report error
+		if let Resolved::Resolved(..) = self.ty_decls[id.0] {
+			// Duplicate error is reported in `decl.rs`.
 		} else {
 			self.ty_decls[id.0] = Resolved::Resolved(span, ty);
 		}
@@ -85,7 +85,10 @@ impl<'a> HirBuilder<'a> {
 		match spurs.first() {
 			Some(init) if self.rodeo.get_or_intern_static("init") == *init => {
 				if spurs.len() == 1 {
-					// todo: report error
+					self.report(Report::ExpectedTypeFoundScope {
+						scope_span: span,
+						found_scope: "init".to_string(),
+					});
 
 					HirTyDeclId(0)
 				} else {
@@ -127,8 +130,8 @@ impl<'a> HirBuilder<'a> {
 	pub fn add_remote(&mut self, from: &ScopeId, name: Spur, span: Span, remote: HirRemote) -> HirRemoteId {
 		let id = self.get_or_create_remote_id(from, name, span);
 
-		if let Resolved::Resolved(first_span, ..) = self.remote_decls[id.0] {
-			// todo: report error
+		if let Resolved::Resolved(..) = self.remote_decls[id.0] {
+			// Duplicate error is reported in `decl.rs`.
 		} else {
 			self.remote_decls[id.0] = Resolved::Resolved(span, remote);
 		}
@@ -142,7 +145,10 @@ impl<'a> HirBuilder<'a> {
 		match spurs.first() {
 			Some(init) if self.rodeo.get_or_intern_static("init") == *init => {
 				if spurs.len() == 1 {
-					// todo: report error
+					self.report(Report::ExpectedRemoteFoundScope {
+						scope_span: span,
+						found_scope: "init".to_string(),
+					});
 
 					HirRemoteId(0)
 				} else {

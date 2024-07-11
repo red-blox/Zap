@@ -1,3 +1,4 @@
+use chumsky::span;
 use lasso::Rodeo;
 use scope::Resolved;
 
@@ -35,30 +36,47 @@ impl<'a> HirBuilder<'a> {
 	pub fn init_ast(mut self, ast: Ast) -> Result<Hir, Vec<Report>> {
 		self.decls(&Self::INIT_SCOPEID, ast.into_decls());
 
-		let mut ty_decls = Vec::new();
+		let HirBuilder {
+			mut reports,
+			ty_decls,
+			remote_decls,
+			..
+		} = self;
 
-		for ty in self.ty_decls {
-			if let Resolved::Resolved(_, ty) = ty {
-				ty_decls.push(ty);
-			} else {
-				// todo: report error
+		let mut resolved_ty_decls = Vec::new();
+
+		for ty in ty_decls {
+			match ty {
+				Resolved::Resolved(_, ty) => {
+					resolved_ty_decls.push(ty);
+				}
+				Resolved::Unresolved(spans) => {
+					let span = spans.first().unwrap().merge(*spans.last().unwrap());
+
+					reports.push(Report::UnknownType { type_span: span });
+				}
 			}
 		}
 
-		let mut remote_decls = Vec::new();
+		let mut resolved_remote_decls = Vec::new();
 
-		for remote in self.remote_decls {
-			if let Resolved::Resolved(_, remote) = remote {
-				remote_decls.push(remote);
-			} else {
-				// todo: report error
+		for remote in remote_decls {
+			match remote {
+				Resolved::Resolved(_, remote) => {
+					resolved_remote_decls.push(remote);
+				}
+				Resolved::Unresolved(spans) => {
+					let span = spans.first().unwrap().merge(*spans.last().unwrap());
+
+					reports.push(Report::UnknownRemote { remote_span: span });
+				}
 			}
 		}
 
-		if self.reports.is_empty() {
-			Ok(Hir::new(self.init_scope, ty_decls, remote_decls))
+		if reports.is_empty() {
+			Ok(Hir::new(self.init_scope, resolved_ty_decls, resolved_remote_decls))
 		} else {
-			Err(self.reports)
+			Err(reports)
 		}
 	}
 

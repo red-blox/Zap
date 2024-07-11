@@ -38,6 +38,14 @@ pub enum Report {
 		char: char,
 	},
 
+	UnknownType {
+		type_span: Span,
+	},
+
+	UnknownRemote {
+		remote_span: Span,
+	},
+
 	ExpectedTokenFound {
 		expected: Vec<String>,
 		found: String,
@@ -64,6 +72,72 @@ pub enum Report {
 		span: Span,
 		min: Box<dyn Display>,
 	},
+
+	DuplicateDecl {
+		decl_kind: String,
+		name: String,
+		span: Span,
+		first_decl_span: Span,
+	},
+
+	DuplicateField {
+		span: Span,
+		first_field_span: Span,
+		field: String,
+	},
+
+	UnexpectedField {
+		span: Span,
+		field: String,
+		decl_kind: String,
+	},
+
+	ExpectedField {
+		span: Span,
+		field: String,
+		decl_name: String,
+		decl_kind: String,
+	},
+
+	ExpectedFromValue {
+		value_span: Span,
+		found: String,
+	},
+
+	ExpectedFromValueWrongType {
+		value_span: Span,
+		found_type: String,
+		help: Option<String>,
+	},
+
+	ExpectedType {
+		value_span: Span,
+		expected_type: String,
+		found_type: String,
+	},
+
+	ExpectedPositiveNumber {
+		value_span: Span,
+	},
+
+	ExpectedTypeFoundScope {
+		scope_span: Span,
+		found_scope: String,
+	},
+
+	ExpectedRemoteFoundScope {
+		scope_span: Span,
+		found_scope: String,
+	},
+
+	IncorrectGenericCount {
+		type_span: Span,
+		type_name: String,
+		generic_spans: Vec<Span>,
+		generics_optional: bool,
+		expected_count: usize,
+		count: usize,
+	},
 }
 
 fn build<'a>(kind: ReportKind, span: Span) -> ariadne::ReportBuilder<'a, Span> {
@@ -82,11 +156,24 @@ impl Report {
 	pub fn kind(&self) -> ReportKind {
 		match self {
 			Self::UnknownCharacter { .. } => ReportKind::Error,
+			Self::UnknownType { .. } => ReportKind::Error,
+			Self::UnknownRemote { .. } => ReportKind::Error,
 			Self::ExpectedTokenFound { .. } => ReportKind::Error,
 			Self::InvalidRange { .. } => ReportKind::Error,
 			Self::ExpectedIntegerFoundNumber { .. } => ReportKind::Error,
 			Self::NumberAboveRange { .. } => ReportKind::Error,
 			Self::NumberBelowRange { .. } => ReportKind::Error,
+			Self::DuplicateDecl { .. } => ReportKind::Error,
+			Self::DuplicateField { .. } => ReportKind::Error,
+			Self::UnexpectedField { .. } => ReportKind::Error,
+			Self::ExpectedField { .. } => ReportKind::Error,
+			Self::ExpectedFromValue { .. } => ReportKind::Error,
+			Self::ExpectedFromValueWrongType { .. } => ReportKind::Error,
+			Self::ExpectedType { .. } => ReportKind::Error,
+			Self::ExpectedTypeFoundScope { .. } => ReportKind::Error,
+			Self::ExpectedRemoteFoundScope { .. } => ReportKind::Error,
+			Self::ExpectedPositiveNumber { .. } => ReportKind::Error,
+			Self::IncorrectGenericCount { .. } => ReportKind::Error,
 		}
 	}
 
@@ -101,6 +188,14 @@ impl Report {
 						.with_color(ERROR)
 						.with_message(format!("unknown character {}", ticks(char).fg(ERROR))),
 				),
+
+			Self::UnknownType { type_span } => build(kind, type_span)
+				.with_message("unknown type")
+				.with_label(label(type_span).with_color(ERROR)),
+
+			Self::UnknownRemote { remote_span } => build(kind, remote_span)
+				.with_message("unknown remote")
+				.with_label(label(remote_span).with_color(ERROR)),
 
 			Self::ExpectedTokenFound {
 				expected,
@@ -151,6 +246,169 @@ impl Report {
 				.with_message(format!("number is below minimum value of {}", ticks(&min).fg(INFO)))
 				.with_label(label(span).with_color(ERROR).with_message("number is below minimum"))
 				.with_help(format!("try raising your value to {}", ticks(&min).fg(INFO))),
+
+			Self::DuplicateDecl {
+				decl_kind,
+				name,
+				span,
+				first_decl_span,
+			} => build(kind, span)
+				.with_message(format!(
+					"the {decl_kind} {} is defined multiple times in the same scope",
+					ticks(&name).fg(ERROR)
+				))
+				.with_labels([
+					label(first_decl_span)
+						.with_message(format!("{decl_kind} {} is first defined here", ticks(&name).fg(INFO)))
+						.with_color(INFO),
+					label(span)
+						.with_color(ERROR)
+						.with_message(format!("{decl_kind} {} later redefined here", ticks(&name).fg(ERROR))),
+				]),
+
+			Self::DuplicateField {
+				span,
+				first_field_span,
+				field,
+			} => build(kind, span)
+				.with_message(format!("field {} is already declared", ticks(&field).fg(ERROR)))
+				.with_labels([
+					label(first_field_span)
+						.with_message(format!("{} first declared here", ticks(&field).fg(INFO)))
+						.with_color(INFO),
+					label(span)
+						.with_message(format!("{} is already declared", ticks(&field).fg(ERROR)))
+						.with_color(ERROR),
+				]),
+
+			Self::UnexpectedField { span, field, decl_kind } => build(kind, span)
+				.with_message(format!("{} have no field named {}", decl_kind, ticks(field).fg(ERROR)))
+				.with_label(
+					label(span)
+						.with_message(format!("{} do not have this field", decl_kind))
+						.with_color(ERROR),
+				),
+
+			Self::ExpectedField {
+				span,
+				field,
+				decl_name,
+				decl_kind,
+			} => build(kind, span)
+				.with_message(format!(
+					"missing field {} in {} {}",
+					ticks(&field).fg(ERROR),
+					decl_kind,
+					ticks(decl_name).fg(ERROR)
+				))
+				.with_label(
+					label(span)
+						.with_message(format!("missing {}", ticks(field).fg(ERROR)))
+						.with_color(ERROR),
+				),
+
+			Self::ExpectedFromValue { value_span, found } => {
+				build(kind, value_span).with_message("invalid value").with_label(
+					label(value_span)
+						.with_message(format!("expected \"client\" or \"server\", found {}", found.fg(ERROR)))
+						.with_color(ERROR),
+				)
+			}
+
+			Self::ExpectedFromValueWrongType {
+				value_span,
+				found_type,
+				help,
+			} => {
+				let builder = build(kind, value_span).with_message("invalid value").with_label(
+					label(value_span)
+						.with_message(format!(
+							"expected \"client\" or \"server\", found {}",
+							ticks(found_type).fg(ERROR)
+						))
+						.with_color(ERROR),
+				);
+
+				if let Some(help) = help {
+					builder.with_help(help)
+				} else {
+					builder
+				}
+			}
+
+			Self::ExpectedType {
+				value_span,
+				expected_type,
+				found_type,
+			} => build(kind, value_span).with_message("mismatched types").with_label(
+				label(value_span)
+					.with_message(format!(
+						"expected {}, found {}",
+						expected_type,
+						ticks(found_type).fg(ERROR)
+					))
+					.with_color(ERROR),
+			),
+
+			Self::ExpectedTypeFoundScope {
+				scope_span,
+				found_scope,
+			} => build(kind, scope_span)
+				.with_message(format!("expected type, found scope {}", ticks(found_scope).fg(ERROR)))
+				.with_label(label(scope_span).with_color(ERROR)),
+
+			Self::ExpectedRemoteFoundScope {
+				scope_span,
+				found_scope,
+			} => build(kind, scope_span)
+				.with_message(format!("expected remote, found scope {}", ticks(found_scope).fg(ERROR)))
+				.with_label(label(scope_span).with_color(ERROR)),
+
+			Self::ExpectedPositiveNumber { value_span } => build(kind, value_span)
+				.with_message("expected positive number")
+				.with_label(label(value_span).with_color(ERROR)),
+
+			Self::IncorrectGenericCount {
+				type_span,
+				type_name,
+				generic_spans,
+				generics_optional,
+				expected_count,
+				count,
+			} => {
+				let mut labels = vec![label(type_span).with_color(ERROR).with_message(format!(
+					"expected {}{expected_count} generic {}",
+					if generics_optional { "at most " } else { "" },
+					if expected_count == 1 { "argument" } else { "arguments" }
+				))];
+
+				if count > expected_count {
+					let start = generic_spans[expected_count];
+					let end = generic_spans.last().unwrap();
+
+					let span = start.merge(*end);
+
+					labels.push(
+						label(span)
+							.with_color(INFO)
+							.with_message(if count - expected_count == 1 {
+								"remove this generic argument"
+							} else {
+								"remove these generic arguments"
+							}),
+					);
+				}
+
+				build(kind, type_span)
+					.with_message(format!(
+						"type {} takes {}{expected_count} generic {} but {count} generic {} supplied",
+						ticks(type_name).fg(ERROR),
+						if generics_optional { "at most " } else { "" },
+						if expected_count == 1 { "argument" } else { "arguments" },
+						if count == 1 { "argument was" } else { "arguments were" },
+					))
+					.with_labels(labels)
+			}
 		}
 		.finish()
 	}
