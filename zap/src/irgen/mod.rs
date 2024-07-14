@@ -330,6 +330,7 @@ pub enum Expr {
 
 	// Literals
 	Str(String),
+	StrOrBool(String),
 	Var(Box<Var>),
 	Num(f64),
 
@@ -442,6 +443,14 @@ impl Display for Expr {
 			Self::Nil => write!(f, "nil"),
 
 			Self::Str(string) => write!(f, "\"{}\"", string),
+			Self::StrOrBool(string) => {
+				if string == "false" || string == "true" {
+					write!(f, "{}", string)
+				} else {
+					write!(f, "\"{}\"", string)
+				}
+			}
+
 			Self::Var(var) => write!(f, "{}", var),
 			Self::Num(num) => write!(f, "{}", num),
 

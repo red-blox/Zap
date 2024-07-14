@@ -156,7 +156,11 @@ pub trait Output: ConfigProvider {
 
 						self.push_indent();
 
-						self.push(&format!("{tag}: \"{name}\",\n"));
+						if *name == "true" || *name == "false" {
+							self.push(&format!("{tag}: {name},\n"));
+						} else {
+							self.push(&format!("{tag}: \"{name}\",\n"));
+						}
 
 						for (name, ty) in struct_ty.fields.iter() {
 							self.push_indent();

@@ -45,8 +45,7 @@ impl Des {
 					} else {
 						self.push_stmt(Stmt::ElseIf(enum_value_expr.clone().eq((i as f64).into())));
 					}
-
-					self.push_assign(into.clone(), Expr::Str(enumerator.to_string()));
+					self.push_assign(into.clone(), Expr::StrOrBool(enumerator.to_string()));
 				}
 
 				self.push_stmt(Stmt::Else);
@@ -67,7 +66,7 @@ impl Des {
 						self.push_stmt(Stmt::ElseIf(enum_value_expr.clone().eq((i as f64).into())));
 					}
 
-					self.push_assign(into.clone().nindex(*tag), Expr::Str(name.to_string()));
+					self.push_assign(into.clone().nindex(*tag), Expr::StrOrBool(name.to_string()));
 					self.push_struct(struct_ty, into.clone());
 				}
 
