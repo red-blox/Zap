@@ -445,7 +445,7 @@ impl Display for Expr {
 			Self::Str(string) => write!(f, "\"{}\"", string),
 			Self::StrOrBool(string) => {
 				if string == "false" {
-					write!(f, "\"{}\"", string)
+					write!(f, "false")
 				} else if string == "true" {
 					write!(f, "true")
 				} else {
