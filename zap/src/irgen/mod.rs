@@ -329,8 +329,8 @@ pub enum Expr {
 	Nil,
 
 	// Literals
-	StrOrBool(String),
 	Str(String),
+	StrOrBool(String),
 	Var(Box<Var>),
 	Num(f64),
 
