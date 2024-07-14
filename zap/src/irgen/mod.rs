@@ -442,16 +442,17 @@ impl Display for Expr {
 			Self::True => write!(f, "true"),
 			Self::Nil => write!(f, "nil"),
 
+			Self::Str(string) => write!(f, "\"{}\"", string),
 			Self::StrOrBool(string) => {
 				if string == "false" {
-					return write!(f, "false")
+					write!(f, "false")
 				} else if string == "true" {
-					return write!(f, "true")
+					write!(f, "true")
 				} else {
-					return write!(f, "\"{}\"", string)
+					write!(f, "\"{}\"", string)
 				}
-			},
-			Self::Str(string) => write!(f, "\"{}\"", string),
+			}
+
 			Self::Var(var) => write!(f, "{}", var),
 			Self::Num(num) => write!(f, "{}", num),
 

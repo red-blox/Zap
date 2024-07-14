@@ -41,7 +41,9 @@ impl Ser {
 					if i == 0 {
 						self.push_stmt(Stmt::If(from_expr.clone().eq(Expr::StrOrBool(enumerator.to_string()))));
 					} else {
-						self.push_stmt(Stmt::ElseIf(from_expr.clone().eq(Expr::StrOrBool(enumerator.to_string()))));
+						self.push_stmt(Stmt::ElseIf(
+							from_expr.clone().eq(Expr::StrOrBool(enumerator.to_string())),
+						));
 					}
 
 					self.push_writenumty((i as f64).into(), numty);
@@ -59,7 +61,9 @@ impl Ser {
 					if i == 0 {
 						self.push_stmt(Stmt::If(tag_expr.clone().eq(Expr::StrOrBool(variant.0.to_string()))));
 					} else {
-						self.push_stmt(Stmt::ElseIf(tag_expr.clone().eq(Expr::StrOrBool(variant.0.to_string()))));
+						self.push_stmt(Stmt::ElseIf(
+							tag_expr.clone().eq(Expr::StrOrBool(variant.0.to_string())),
+						));
 					}
 
 					self.push_writeu8((i as f64).into());
