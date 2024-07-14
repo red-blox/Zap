@@ -143,7 +143,7 @@ pub trait Output {
 
 						self.push_indent();
 
-						if name.to_string() == "true" || name.to_string() == "false" {
+						if *name == "true" || *name == "false" {
 							self.push(&format!("{tag}: {name},\n"));
 						} else {
 							self.push(&format!("{tag}: \"{name}\",\n"));
