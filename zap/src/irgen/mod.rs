@@ -443,7 +443,7 @@ impl Display for Expr {
 			Self::Nil => write!(f, "nil"),
 
 			Self::StrOrBool(string) => {
-				if string == "false" || string == "False" {
+				if string == "false" {
 					return write!(f, "false")
 				} else if string == "true" {
 					return write!(f, "true")
