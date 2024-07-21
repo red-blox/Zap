@@ -32,9 +32,9 @@ Zap's IDL is easy to learn and easy to use. It's simple while still being expres
 
 Zap's API is fully typesafe, with Luau or TypeScript. You'll recieve full type checking and autocompletion in your editor.
 
-### Uncompromised Maps
+### Extended Type Support
 
-Map from anything to anything. If your keys' datatype is sendable through a `RemoteEvent` at all, Zap handles your table. 
+Zap supports far more types than normal `RemoteEvent` serialization does. Maps with numbers or `Instance`s as keys are good examples.
 
 ## 🔒 Security
 
