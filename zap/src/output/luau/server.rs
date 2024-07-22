@@ -256,23 +256,24 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		if fndecl.call == FnCall::Async {
-			self.push_line("task.spawn(function(player, call_id, value)");
+			// Avoid using upvalues as an optimization.
+			self.push_line("task.spawn(function(player_2, call_id_2, value_2)");
 			self.indent();
 		}
 
-		self.push_line(&format!("local rets = events[{id}](player, value)"));
+		self.push_line(&format!("local rets = events[{id}](player_2, value_2)"));
 
-		self.push_line("load_player(player)");
+		self.push_line("load_player(player_2)");
 		self.push_write_event_id(fndecl.id);
 
 		self.push_line("alloc(1)");
-		self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id)");
+		self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id_2)");
 
 		if let Some(ty) = &fndecl.rets {
 			self.push_stmts(&ser::gen(ty, "rets", self.config.write_checks));
 		}
 
-		self.push_line("player_map[player] = save()");
+		self.push_line("player_map[player_2] = save()");
 
 		if fndecl.call == FnCall::Async {
 			self.dedent();
