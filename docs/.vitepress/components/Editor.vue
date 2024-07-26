@@ -367,7 +367,7 @@ const beforeMount = (monaco: Monaco) => {
 							insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
 							documentation: "Set",
 							range: range,
-						}
+						},
 						{
 							label: "struct",
 							kind: monaco.languages.CompletionItemKind.Snippet,
