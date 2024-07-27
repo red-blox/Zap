@@ -732,12 +732,9 @@ impl<'src> ClientOutput<'src> {
 			self.push(")");
 
 			if let Some(ty) = &fndecl.rets {
-				match self.config.yield_type {
-					YieldType::Yield => {
-						self.push(": ");
-						self.push_ty(ty);
-					}
-					_ => (),
+				if self.config.yield_type == YieldType::Yield {
+					self.push(": ");
+					self.push_ty(ty);
 				}
 			}
 
