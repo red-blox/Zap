@@ -729,7 +729,14 @@ impl<'src> ClientOutput<'src> {
 				self.push_ty(ty);
 			}
 
-			self.push(")\n");
+			self.push(")");
+
+			if let Some(ty) = &fndecl.rets {
+				self.push(": ");
+				self.push_ty(ty);
+			}
+
+			self.push("\n");
 			self.indent();
 
 			self.push_write_event_id(fndecl.id);
