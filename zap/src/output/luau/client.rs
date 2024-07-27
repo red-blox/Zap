@@ -736,7 +736,7 @@ impl<'src> ClientOutput<'src> {
 					YieldType::Yield => {
 						self.push(": ");
 						self.push_ty(ty);
-					},
+					}
 					_ => (),
 				}
 			}
