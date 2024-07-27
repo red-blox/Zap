@@ -729,7 +729,24 @@ impl<'src> ClientOutput<'src> {
 				self.push_ty(ty);
 			}
 
-			self.push(")\n");
+			self.push(")");
+
+			if let Some(ty) = &fndecl.rets {
+				match self.config.yield_type {
+					YieldType::Future => {
+						self.push(": Future.Future<");
+						self.push_ty(ty);
+						self.push(">");
+					}
+					YieldType::Yield => {
+						self.push(": ");
+						self.push_ty(ty);
+					}
+					_ => (),
+				}
+			}
+
+			self.push("\n");
 			self.indent();
 
 			self.push_write_event_id(fndecl.id);
