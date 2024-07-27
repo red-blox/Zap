@@ -757,10 +757,10 @@ impl<'src> ClientOutput<'src> {
 			match self.config.yield_type {
 				YieldType::Yield => {
 					self.push_line(&format!("event_queue[{id}][function_call_id] = coroutine.running()",));
-					self.push_line("local value = coroutine.yield()");
+					self.push_line("local async_value = coroutine.yield()");
 				}
 				YieldType::Future => {
-					self.push_line("local value = Future.new(function()");
+					self.push_line("local async_value = Future.new(function()");
 					self.indent();
 
 					self.push_line(&format!("event_queue[{id}][function_call_id] = coroutine.running()",));
@@ -770,7 +770,7 @@ impl<'src> ClientOutput<'src> {
 					self.push_line("end)");
 				}
 				YieldType::Promise => {
-					self.push_line("local value = Promise.new(function(resolve)");
+					self.push_line("local async_value = Promise.new(function(resolve)");
 					self.indent();
 
 					self.push_line(&format!("event_queue[{id}][function_call_id] = resolve"));
@@ -780,7 +780,7 @@ impl<'src> ClientOutput<'src> {
 				}
 			}
 
-			self.push_line("return value");
+			self.push_line("return async_value");
 
 			self.dedent();
 			self.push_line("end,");
