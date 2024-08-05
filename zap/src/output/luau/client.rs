@@ -729,7 +729,7 @@ impl<'src> ClientOutput<'src> {
 				self.push_ty(ty);
 			}
 
-			self.push(")\n");
+			self.push(")");
 
 			if let Some(ty) = &fndecl.rets {
 				match self.config.yield_type {
