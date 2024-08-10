@@ -1,6 +1,6 @@
 use crate::{
 	config::{Config, EvDecl, FnDecl, TyDecl},
-	irgen::{des, Stmt}, 
+	irgen::{des, Stmt},
 	Output,
 };
 
@@ -202,7 +202,7 @@ impl<'src> ToolingOutput<'src> {
 
 		self.dedent();
 		self.push_line("})");
-		
+
 		self.dedent();
 		self.push_line("else");
 		self.indent();
@@ -224,7 +224,6 @@ impl<'src> ToolingOutput<'src> {
 
 		self.dedent();
 		self.push_line("end");
-
 
 		self.dedent();
 	}
@@ -320,14 +319,14 @@ impl<'src> ToolingOutput<'src> {
 
 		self.dedent();
 		self.push_line("end");
-		
+
 		self.buf
 	}
 }
 
 pub fn output(config: &Config) -> Option<Output> {
 	if !config.tooling {
-		return None
+		return None;
 	}
 
 	#[cfg(not(target_arch = "wasm32"))]

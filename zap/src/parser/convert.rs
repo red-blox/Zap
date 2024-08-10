@@ -92,7 +92,7 @@ impl<'src> Converter<'src> {
 
 		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
 		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
-		
+
 		let (remote_scope, ..) = self.str_opt("remote_scope", "ZAP", &config.opts);
 
 		let (server_output, ..) = self.str_opt("server_output", "network/server.lua", &config.opts);
