@@ -559,13 +559,13 @@ impl<'src> ClientOutput<'src> {
 			.iter()
 			.filter(|ev_decl| ev_decl.from == EvSource::Client)
 		{
-			self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
+			self.push_line(&format!("{name} = {{", name = ev.name));
 			self.indent();
 
 			self.push_return_fire(ev);
 
 			self.dedent();
-			self.push_line("}),");
+			self.push_line("},");
 		}
 	}
 
@@ -698,7 +698,7 @@ impl<'src> ClientOutput<'src> {
 			.iter()
 			.filter(|ev_decl| ev_decl.from == EvSource::Server)
 		{
-			self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
+			self.push_line(&format!("{name} = {{", name = ev.name));
 			self.indent();
 
 			match ev.call {
@@ -707,7 +707,7 @@ impl<'src> ClientOutput<'src> {
 			}
 
 			self.dedent();
-			self.push_line("}),");
+			self.push_line("},");
 		}
 	}
 
@@ -718,7 +718,7 @@ impl<'src> ClientOutput<'src> {
 		for fndecl in self.config.fndecls.iter() {
 			let id = fndecl.id;
 
-			self.push_line(&format!("{name} = table.freeze({{", name = fndecl.name));
+			self.push_line(&format!("{name} = {{", name = fndecl.name));
 			self.indent();
 
 			self.push_indent();
@@ -803,12 +803,12 @@ impl<'src> ClientOutput<'src> {
 			self.push_line("end,");
 
 			self.dedent();
-			self.push_line("}),");
+			self.push_line("},");
 		}
 	}
 
 	pub fn push_return(&mut self) {
-		self.push_line("local returns = table.freeze({");
+		self.push_line("local returns = {");
 		self.indent();
 
 		let send_events = self.config.casing.with("SendEvents", "sendEvents", "send_events");
@@ -820,7 +820,7 @@ impl<'src> ClientOutput<'src> {
 		self.push_return_functions();
 
 		self.dedent();
-		self.push_line("})");
+		self.push_line("}");
 
 		self.push_line("type Events = typeof(returns)");
 		self.push_line("return returns");
