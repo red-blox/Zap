@@ -158,7 +158,11 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!("Name = \"{}\",", ev.name));
-		self.push_line("Arguments = { value }");
+		self.push_line("Arguments = { value },");
+
+		if self.config.tooling_show_decompressed_size {
+			self.push_line("ShowDecompressedSize = true")
+		}
 
 		self.dedent();
 		self.push_line("})");
@@ -198,7 +202,11 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!("Name = \"{} (callback)\",", fn_decl.name));
-		self.push_line("Arguments = { value }");
+		self.push_line("Arguments = { value },");
+
+		if self.config.tooling_show_decompressed_size {
+			self.push_line("ShowDecompressedSize = true")
+		}
 
 		self.dedent();
 		self.push_line("})");
@@ -217,7 +225,11 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!("Name = \"{} (request)\",", fn_decl.name));
-		self.push_line("Arguments = { value }");
+		self.push_line("Arguments = { value },");
+
+		if self.config.tooling_show_decompressed_size {
+			self.push_line("ShowDecompressedSize = true")
+		}
 
 		self.dedent();
 		self.push_line("})");
