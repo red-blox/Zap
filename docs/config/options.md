@@ -7,6 +7,19 @@ opt client_output = "src/client/zap.luau"`
 
 const asyncLibExample = `opt yield_type = "promise"
 opt async_lib = "require(game:GetService('ReplicatedStorage').Promise)"`
+
+const toolingOutputExample = `opt tooling = true
+opt tooling_output = "src/ReplicatedStorage/RemoteName.profiler.luau"`
+
+const toolingOutputExample2 = `opt typescript = true
+opt tooling = true
+opt tooling_output = "src/include/RemoteName.profiler.lua"`
+
+const toolingShowDecompressedSizeExample = `opt tooling = true
+opt tooling_show_decompressed_size = true`
+
+const toolingShowInternalDataExample = `opt tooling = true
+opt tooling_show_internal_data = true`
 </script>
 
 # Options
@@ -227,3 +240,58 @@ The path is empty.
 ### Example
 
 <CodeBlock :code="asyncLibExample" />
+
+## `tooling`
+
+This option determines if Zap should generate a file to allow it to inteface with other tooling. More information on this feature can be found on the [tooling intergration](../usage/tooling.md) page.
+
+### Default
+
+`false`
+
+### Example
+
+<CodeBlock code="opt tooling = true" />
+
+## `tooling_output`
+
+This options allows you to configure where Zap will output its generated [tooling code](../usage/tooling.md). If you're not using the CLI these options can be ignored.
+
+The path is relative to the configuration file and should point to a lua(u) file.
+
+### Default
+
+<CodeBlock code='opt tooling_output = "./network/tooling.lua"' />
+
+### Example
+
+<CodeBlock :code="toolingOutputExample" />
+
+or
+
+<CodeBlock :code="toolingOutputExample2" />
+
+
+## `tooling_show_decompressed_size`
+
+This option can tell users of the [tooling intergration](../usage/tooling.md) to display the decompressed size of the data. This can be useful for tracking the amount of memory the data transfered by Zap can take up.
+
+### Default
+
+`false`
+
+### Example
+
+<CodeBlock :code="toolingShowDecompressedSizeExample" />
+
+## `tooling_show_internal_data`
+
+This option will add an additional element to the start of the [arguments array](../usage/tooling.md#tooling-format-returns) returned by the [tooling intergration](../usage/tooling.md) function. More information on its structure can be found [here](../usage/tooling.md#tooling-format-returns).
+
+### Default
+
+`false`
+
+### Example
+
+<CodeBlock :code="toolingShowInternalDataExample" />
