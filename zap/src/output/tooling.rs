@@ -244,8 +244,39 @@ impl<'src> ToolingOutput<'src> {
 		// 	return self.buf;
 		// };
 
-		self.push_line("return function(player, incoming_buff, incoming_inst)");
+		self.push_line("local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")");
+		self.push("\n");
+
+		self.push_line("return function(remote_instance, player, incoming_buff, incoming_inst)");
 		self.indent();
+
+		self.push_line(&format!(
+			"local reliable = ReplicatedStorage:FindFirstChild(\"{}_RELIABLE\")",
+			self.config.remote_scope
+		));
+		self.push_line(&format!(
+			"local unreliable = ReplicatedStorage:FindFirstChild(\"{}_UNRELIABLE\")",
+			self.config.remote_scope
+		));
+		self.push("\n");
+
+		self.push_line("if not reliable or not unreliable then");
+		self.indent();
+
+		self.push_line("return");
+
+		self.dedent();
+		self.push_line("end");
+		self.push("\n");
+
+		self.push_line("if remote_instance ~= reliable and remote_instance ~= unreliable then");
+		self.indent();
+
+		self.push_line("return");
+
+		self.dedent();
+		self.push_line("end");
+		self.push("\n");
 
 		self.push_line("local isServer = true");
 		self.push_line("if type(player) == \"buffer\" then");
