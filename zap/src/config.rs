@@ -13,7 +13,6 @@ pub struct Config<'src> {
 	pub typescript_max_tuple_length: f64,
 
 	pub tooling: bool,
-	pub tooling_show_decompressed_size: bool,
 	pub tooling_show_internal_data: bool,
 
 	pub write_checks: bool,

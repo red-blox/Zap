@@ -15,9 +15,6 @@ const toolingOutputExample2 = `opt typescript = true
 opt tooling = true
 opt tooling_output = "src/include/RemoteName.profiler.lua"`
 
-const toolingShowDecompressedSizeExample = `opt tooling = true
-opt tooling_show_decompressed_size = true`
-
 const toolingShowInternalDataExample = `opt tooling = true
 opt tooling_show_internal_data = true`
 </script>
@@ -270,19 +267,6 @@ The path is relative to the configuration file and should point to a lua(u) file
 or
 
 <CodeBlock :code="toolingOutputExample2" />
-
-
-## `tooling_show_decompressed_size`
-
-This option can tell users of the [tooling intergration](../usage/tooling.md) to display the decompressed size of the data. This can be useful for tracking the amount of memory the data transfered by Zap can take up.
-
-### Default
-
-`false`
-
-### Example
-
-<CodeBlock :code="toolingShowDecompressedSizeExample" />
 
 ## `tooling_show_internal_data`
 

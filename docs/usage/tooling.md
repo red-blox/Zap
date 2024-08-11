@@ -60,13 +60,11 @@ end)`
 const returnsLua = `type DecompressedData = { {
     Name: string,
     Arguments: { any },
-    ShowDecompressedSize: boolean?
 } }`
 
 const returnsTS = `type DecompressedData = {
     Name: string,
     Arguments: unknown[],
-    ShowDecompressedSize?: boolean
 }[]`
 
 const internalDataLua = `type InternalData = {

@@ -169,12 +169,8 @@ impl<'src> ToolingOutput<'src> {
 			));
 		}
 
-		self.push("value },");
+		self.push("value }");
 		self.push("\n");
-
-		if self.config.tooling_show_decompressed_size {
-			self.push_line("ShowDecompressedSize = true")
-		}
 
 		self.dedent();
 		self.push_line("})");
@@ -226,12 +222,8 @@ impl<'src> ToolingOutput<'src> {
 			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
 		}
 
-		self.push("value },");
+		self.push("value }");
 		self.push("\n");
-
-		if self.config.tooling_show_decompressed_size {
-			self.push_line("ShowDecompressedSize = true")
-		}
 
 		self.dedent();
 		self.push_line("})");
@@ -258,12 +250,8 @@ impl<'src> ToolingOutput<'src> {
 			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
 		}
 
-		self.push("value },");
+		self.push("value }");
 		self.push("\n");
-
-		if self.config.tooling_show_decompressed_size {
-			self.push_line("ShowDecompressedSize = true")
-		}
 
 		self.dedent();
 		self.push_line("})");

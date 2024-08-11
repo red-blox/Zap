@@ -89,8 +89,6 @@ impl<'src> Converter<'src> {
 		let (typescript_max_tuple_length, ..) = self.num_opt("typescript_max_tuple_length", 10.0, &config.opts);
 
 		let (tooling, ..) = self.boolean_opt("tooling", false, &config.opts);
-		let (tooling_show_decompressed_size, ..) =
-			self.boolean_opt("tooling_show_decompressed_size", false, &config.opts);
 		let (tooling_show_internal_data, ..) = self.boolean_opt("tooling_show_internal_data", false, &config.opts);
 
 		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
@@ -115,7 +113,6 @@ impl<'src> Converter<'src> {
 			typescript_max_tuple_length,
 
 			tooling,
-			tooling_show_decompressed_size,
 			tooling_show_internal_data,
 
 			write_checks,
