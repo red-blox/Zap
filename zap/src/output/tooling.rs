@@ -189,19 +189,21 @@ impl<'src> ToolingOutput<'src> {
 
 		self.indent();
 
+		self.push_line("local call_id = buffer.readu8(incoming_buff, read(1))");
+
 		self.push_line("if isServer then");
 		self.indent();
 
 		self.push_line("local value");
 
-		if let Some(data) = &fn_decl.rets {
+		if let Some(data) = &fn_decl.args {
 			self.push_stmts(&des::gen(data, "value", true));
 		}
 
 		self.push_line("table.insert(events, {");
 		self.indent();
 
-		self.push_line(&format!("Name = \"{} (callback)\",", fn_decl.name));
+		self.push_line(&format!("Name = \"{} (request)\",", fn_decl.name));
 		self.push_line("Arguments = { value },");
 
 		if self.config.tooling_show_decompressed_size {
@@ -217,14 +219,14 @@ impl<'src> ToolingOutput<'src> {
 
 		self.push_line("local value");
 
-		if let Some(data) = &fn_decl.args {
+		if let Some(data) = &fn_decl.rets {
 			self.push_stmts(&des::gen(data, "value", true));
 		}
 
 		self.push_line("table.insert(events, {");
 		self.indent();
 
-		self.push_line(&format!("Name = \"{} (request)\",", fn_decl.name));
+		self.push_line(&format!("Name = \"{} (callback)\",", fn_decl.name));
 		self.push_line("Arguments = { value },");
 
 		if self.config.tooling_show_decompressed_size {
