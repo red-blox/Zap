@@ -163,7 +163,10 @@ impl<'src> ToolingOutput<'src> {
 		self.push("Arguments = { ");
 
 		if self.config.tooling_show_internal_data {
-			self.push("{ event_id = id }, ");
+			self.push(&format!(
+				"{{ {} = id }}, ",
+				self.config.casing.with("EventId", "eventId", "event_id")
+			));
 		}
 
 		self.push("value },");
@@ -181,6 +184,8 @@ impl<'src> ToolingOutput<'src> {
 
 	fn push_function_callback(&mut self, first: bool, fn_decl: &FnDecl) {
 		let id = fn_decl.id;
+		let event_id = self.config.casing.with("EventId", "eventId", "event_id");
+		let call_id = self.config.casing.with("CallId", "callId", "call_id");
 
 		self.push_indent();
 
@@ -218,7 +223,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push("Arguments = { ");
 
 		if self.config.tooling_show_internal_data {
-			self.push("{ event_id = id, call_id = call_id  }, ");
+			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
 		}
 
 		self.push("value },");
@@ -250,7 +255,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push("Arguments = { ");
 
 		if self.config.tooling_show_internal_data {
-			self.push("{ event_id = id, call_id = call_id  }, ");
+			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
 		}
 
 		self.push("value },");

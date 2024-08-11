@@ -30,7 +30,7 @@ Lua:
 TS:
 <CodeBlock lang="typescript" :code="returnsTS" />
 
-If the [`tooling_show_internal_data`](../config/options.md#tooling-show-internal-data) argument is `true`, then the first argument is of the type:
+If the [`tooling_show_internal_data`](../config/options.md#tooling-show-internal-data) argument is `true`, then the first argument is of the type (although this type will respect your casing option):
 
 Lua:
 <CodeBlock lang="lua" :code="internalDataLua" />
@@ -64,18 +64,18 @@ const returnsLua = `type DecompressedData = { {
 } }`
 
 const returnsTS = `type DecompressedData = {
-    name: string,
+    Name: string,
     Arguments: unknown[],
     ShowDecompressedSize?: boolean
 }[]`
 
 const internalDataLua = `type InternalData = {
-    event_id: number,
-    call_id: number?
+    EventId: number,
+    CallId: number?
 }`
 
 const internalDataTS = `interface InternalData {
-    event_id: number,
-    call_id?: number
+    EventId: number,
+    CallId?: number
 }`
 </script>
