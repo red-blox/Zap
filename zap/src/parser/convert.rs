@@ -91,6 +91,7 @@ impl<'src> Converter<'src> {
 		let (tooling, ..) = self.boolean_opt("tooling", false, &config.opts);
 		let (tooling_show_decompressed_size, ..) =
 			self.boolean_opt("tooling_show_decompressed_size", false, &config.opts);
+		let (tooling_show_internal_data, ..) = self.boolean_opt("tooling_show_internal_data", false, &config.opts);
 
 		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
 		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
@@ -115,6 +116,7 @@ impl<'src> Converter<'src> {
 
 			tooling,
 			tooling_show_decompressed_size,
+			tooling_show_internal_data,
 
 			write_checks,
 			manual_event_loop,

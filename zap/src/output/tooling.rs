@@ -158,7 +158,16 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!("Name = \"{}\",", ev.name));
-		self.push_line("Arguments = { { event_id = id }, value },");
+
+		self.push_indent();
+		self.push("Arguments = { ");
+
+		if self.config.tooling_show_internal_data {
+			self.push("{ event_id = id }, ");
+		}
+
+		self.push("value },");
+		self.push("\n");
 
 		if self.config.tooling_show_decompressed_size {
 			self.push_line("ShowDecompressedSize = true")
@@ -189,7 +198,7 @@ impl<'src> ToolingOutput<'src> {
 
 		self.indent();
 
-		self.push_line("local function_call_id = buffer.readu8(incoming_buff, read(1))");
+		self.push_line("local call_id = buffer.readu8(incoming_buff, read(1))");
 
 		self.push_line("if isServer then");
 		self.indent();
@@ -204,7 +213,16 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!("Name = \"{} (request)\",", fn_decl.name));
-		self.push_line("Arguments = { { event_id = id, function_call_id = function_call_id }, value },");
+
+		self.push_indent();
+		self.push("Arguments = { ");
+
+		if self.config.tooling_show_internal_data {
+			self.push("{ event_id = id, call_id = call_id  }, ");
+		}
+
+		self.push("value },");
+		self.push("\n");
 
 		if self.config.tooling_show_decompressed_size {
 			self.push_line("ShowDecompressedSize = true")
@@ -227,7 +245,16 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!("Name = \"{} (callback)\",", fn_decl.name));
-		self.push_line("Arguments = { { event_id = id, function_call_id = function_call_id }, value },");
+
+		self.push_indent();
+		self.push("Arguments = { ");
+
+		if self.config.tooling_show_internal_data {
+			self.push("{ event_id = id, call_id = call_id  }, ");
+		}
+
+		self.push("value },");
+		self.push("\n");
 
 		if self.config.tooling_show_decompressed_size {
 			self.push_line("ShowDecompressedSize = true")

@@ -14,6 +14,7 @@ pub struct Config<'src> {
 
 	pub tooling: bool,
 	pub tooling_show_decompressed_size: bool,
+	pub tooling_show_internal_data: bool,
 
 	pub write_checks: bool,
 	pub manual_event_loop: bool,
