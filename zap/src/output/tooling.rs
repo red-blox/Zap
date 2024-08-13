@@ -285,11 +285,25 @@ impl<'src> ToolingOutput<'src> {
 		self.indent();
 
 		self.push_line(&format!(
-			"local reliable = ReplicatedStorage:FindFirstChild(\"{}_RELIABLE\")",
+			"local remotes = ReplicatedStorage:FindFirstChild(\"{}\")",
+			self.config.remote_folder
+		));
+
+		self.push_line("if not remotes then");
+		self.indent();
+
+		self.push_line("return");
+
+		self.dedent();
+		self.push_line("end");
+		self.push("\n");
+
+		self.push_line(&format!(
+			"local reliable = remotes:FindFirstChild(\"{}_RELIABLE\")",
 			self.config.remote_scope
 		));
 		self.push_line(&format!(
-			"local unreliable = ReplicatedStorage:FindFirstChild(\"{}_UNRELIABLE\")",
+			"local unreliable = remotes:FindFirstChild(\"{}_UNRELIABLE\")",
 			self.config.remote_scope
 		));
 		self.push("\n");
