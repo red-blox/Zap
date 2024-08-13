@@ -65,6 +65,16 @@ fn main() -> Result<()> {
 
 			std::fs::write(file_path, defs)?;
 		}
+
+		if let Some(tooling) = code.tooling {
+			let tooling_path = config_path.parent().unwrap().join(tooling.path);
+
+			if let Some(parent) = tooling_path.parent() {
+				std::fs::create_dir_all(parent)?;
+			}
+
+			std::fs::write(tooling_path, tooling.code)?;
+		}
 	}
 
 	if diagnostics.is_empty() {

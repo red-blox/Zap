@@ -27,6 +27,7 @@ const sidebar = [
     items: [
       { text: 'Generate Code', link: '/usage/generation' },
       { text: 'Event Usage', link: '/usage/events' },
+      { text: 'Tooling Intergration', link: '/usage/tooling' },
     ]
   }
 ]

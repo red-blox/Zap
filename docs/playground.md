@@ -50,6 +50,13 @@
 			:isCodeBlock="false"
 		/>
 	</PluginTabsTab>
+	<PluginTabsTab label="Tooling" v-if="compiledResult.code && compiledResult.code.tooling">
+		<CodeBlock
+			:code="compiledResult.code.tooling.code"
+			lang="lua"
+			:isCodeBlock="false"
+		/>
+	</PluginTabsTab>
 </PluginTabs>
 
 </ClientOnly>

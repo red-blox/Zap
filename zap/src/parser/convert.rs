@@ -85,14 +85,20 @@ impl<'src> Converter<'src> {
 			self.report(Report::AnalyzeEmptyEvDecls);
 		}
 
-		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
 		let (typescript, ..) = self.boolean_opt("typescript", false, &config.opts);
-		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
 		let (typescript_max_tuple_length, ..) = self.num_opt("typescript_max_tuple_length", 10.0, &config.opts);
+
+		let (tooling, ..) = self.boolean_opt("tooling", false, &config.opts);
+		let (tooling_show_internal_data, ..) = self.boolean_opt("tooling_show_internal_data", false, &config.opts);
+
+		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
+		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
+
+		let (remote_scope, ..) = self.str_opt("remote_scope", "ZAP", &config.opts);
 
 		let (server_output, ..) = self.str_opt("server_output", "network/server.lua", &config.opts);
 		let (client_output, ..) = self.str_opt("client_output", "network/client.lua", &config.opts);
-		let (remote_scope, ..) = self.str_opt("remote_scope", "ZAP", &config.opts);
+		let (tooling_output, ..) = self.str_opt("tooling_output", "network/tooling.lua", &config.opts);
 
 		let casing = self.casing_opt(&config.opts);
 		let yield_type = self.yield_type_opt(typescript, &config.opts);
@@ -103,15 +109,20 @@ impl<'src> Converter<'src> {
 			evdecls,
 			fndecls,
 
-			write_checks,
 			typescript,
 			typescript_max_tuple_length,
+
+			tooling,
+			tooling_show_internal_data,
+
+			write_checks,
 			manual_event_loop,
 
 			remote_scope,
 
 			server_output,
 			client_output,
+			tooling_output,
 
 			casing,
 			yield_type,

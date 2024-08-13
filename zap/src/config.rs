@@ -9,15 +9,19 @@ pub struct Config<'src> {
 	pub evdecls: Vec<EvDecl<'src>>,
 	pub fndecls: Vec<FnDecl<'src>>,
 
-	pub write_checks: bool,
 	pub typescript: bool,
 	pub typescript_max_tuple_length: f64,
-	pub manual_event_loop: bool,
 
+	pub tooling: bool,
+	pub tooling_show_internal_data: bool,
+
+	pub write_checks: bool,
+	pub manual_event_loop: bool,
 	pub remote_scope: &'src str,
 
 	pub server_output: &'src str,
 	pub client_output: &'src str,
+	pub tooling_output: &'src str,
 
 	pub casing: Casing,
 	pub yield_type: YieldType,
