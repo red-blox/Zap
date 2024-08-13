@@ -828,11 +828,15 @@ impl<'src> ClientOutput<'src> {
 
 	pub fn push_remotes(&mut self) {
 		self.push_line(&format!(
-			"local reliable = ReplicatedStorage:WaitForChild(\"{}_RELIABLE\")",
+			"local remotes = ReplicatedStorage:WaitForChild(\"{}\")",
+			self.config.remote_folder
+		));
+		self.push_line(&format!(
+			"local reliable = remotes:WaitForChild(\"{}_RELIABLE\")",
 			self.config.remote_scope
 		));
 		self.push_line(&format!(
-			"local unreliable = ReplicatedStorage:WaitForChild(\"{}_UNRELIABLE\")",
+			"local unreliable = remotes:WaitForChild(\"{}_UNRELIABLE\")",
 			self.config.remote_scope
 		));
 		self.push("\n");

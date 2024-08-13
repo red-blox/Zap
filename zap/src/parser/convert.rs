@@ -95,6 +95,7 @@ impl<'src> Converter<'src> {
 		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
 
 		let (remote_scope, ..) = self.str_opt("remote_scope", "ZAP", &config.opts);
+		let (remote_folder, ..) = self.str_opt("remote_folder", "ZAP", &config.opts);
 
 		let (server_output, ..) = self.str_opt("server_output", "network/server.lua", &config.opts);
 		let (client_output, ..) = self.str_opt("client_output", "network/client.lua", &config.opts);
@@ -119,6 +120,7 @@ impl<'src> Converter<'src> {
 			manual_event_loop,
 
 			remote_scope,
+			remote_folder,
 
 			server_output,
 			client_output,

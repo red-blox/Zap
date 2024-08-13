@@ -877,22 +877,36 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	pub fn push_create_remotes(&mut self) {
+		self.push("\n");
 		self.push_line(&format!(
-			"local reliable = ReplicatedStorage:FindFirstChild(\"{}_RELIABLE\")",
+			"local remotes = ReplicatedStorage:FindFirstChild(\"{}\")",
+			self.config.remote_folder
+		));
+		self.push_line("if remotes == nil then");
+		self.indent();
+		self.push_line("remotes = Instance.new(\"Folder\")");
+		self.push_line(&format!("remotes.Name = \"{}\"", self.config.remote_folder));
+		self.push_line("remotes.Parent = ReplicatedStorage");
+		self.dedent();
+		self.push_line("end");
+		self.push("\n");
+
+		self.push_line(&format!(
+			"local reliable = remotes:FindFirstChild(\"{}_RELIABLE\")",
 			self.config.remote_scope
 		));
 		self.push_line("if reliable == nil then");
 		self.indent();
 		self.push_line("reliable = Instance.new(\"RemoteEvent\")");
 		self.push_line(&format!("reliable.Name = \"{}_RELIABLE\"", self.config.remote_scope));
-		self.push_line("reliable.Parent = ReplicatedStorage");
+		self.push_line("reliable.Parent = remotes");
 		self.dedent();
 		self.push_line("end");
 
 		self.push("\n");
 
 		self.push_line(&format!(
-			"local unreliable = ReplicatedStorage:FindFirstChild(\"{}_UNRELIABLE\")",
+			"local unreliable = remotes:FindFirstChild(\"{}_UNRELIABLE\")",
 			self.config.remote_scope
 		));
 		self.push_line("if unreliable == nil then");
@@ -902,9 +916,10 @@ impl<'a> ServerOutput<'a> {
 			"unreliable.Name = \"{}_UNRELIABLE\"",
 			self.config.remote_scope
 		));
-		self.push_line("unreliable.Parent = ReplicatedStorage");
+		self.push_line("unreliable.Parent = remotes");
 		self.dedent();
 		self.push_line("end");
+		self.push("\n");
 	}
 
 	pub fn push_player_map(&mut self) {

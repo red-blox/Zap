@@ -56,6 +56,24 @@ The generated remotes will be `ZAP_RELIABLE` and `ZAP_UNRELIABLE` respectively.
 
 The generated remotes will change to be `PACKAGE_NAME_RELIABLE` and `PACKAGE_NAME_UNRELIABLE` respectively.
 
+## `remote_folder`
+
+This option changes the name folder that Zap's remotes are placed inside of ReplicatedStorage.
+
+### Default
+
+<CodeBlock code = 'opt remote_folder = "ZAP"' />
+
+
+The generated remotes will be in `ReplicatedStorage -> ZAP`.
+
+
+### Example
+
+<CodeBlock code = 'opt remote_scope = "CHARACTER"' />
+
+
+The generated remotes be in `ReplicatedStorage -> CHARACTER`
 
 ## `casing`
 

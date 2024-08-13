@@ -17,7 +17,9 @@ pub struct Config<'src> {
 
 	pub write_checks: bool,
 	pub manual_event_loop: bool,
+
 	pub remote_scope: &'src str,
+	pub remote_folder: &'src str,
 
 	pub server_output: &'src str,
 	pub client_output: &'src str,
