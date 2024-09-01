@@ -337,16 +337,16 @@ impl<'src> Report<'src> {
 			Self::AnalyzeDuplicateDecl { .. } => None,
 		}
 	}
-}
 
-impl<'src> From<Report<'src>> for Diagnostic<()> {
-	fn from(val: Report<'src>) -> Self {
-		let diagnostic = Diagnostic::new(val.severity())
-			.with_code(val.code())
-			.with_message(val.message())
-			.with_labels(val.labels());
+	pub fn to_diagnostic(&self, no_warnings: bool) -> Diagnostic<()> {
+		let severity = if no_warnings { Severity::Error } else { self.severity() };
 
-		if let Some(notes) = val.notes() {
+		let diagnostic = Diagnostic::new(severity)
+			.with_code(self.code())
+			.with_message(self.message())
+			.with_labels(self.labels());
+
+		if let Some(notes) = self.notes() {
 			diagnostic.with_notes(notes)
 		} else {
 			diagnostic

@@ -2,8 +2,13 @@
 
 <ClientOnly>
 
-<div class="button plugin-tabs">
-	<button @click="saveURL"><span>📎</span> Save URL</button>
+<div class="flex">
+	<div class="button plugin-tabs">
+		<button @click="saveURL"><span>📎</span> Save URL</button>
+	</div>
+	<div class="button plugin-tabs">
+		<button @click="toggleNoWarnings">{{ noWarnings ? "❌ Zap will Only Error" : "⚠️ Warnings Allowed" }}</button>
+	</div>
 </div>
 
 **Input:**
@@ -78,6 +83,7 @@ const styles = ref({
 	padding: "20px 0px",
 })
 const code = ref("");
+const noWarnings = ref(false);
 const isTypeScript = ref(false)
 const free = () => {};
 const compiledResult = ref<PlaygroundCode>({
@@ -108,9 +114,9 @@ onMounted(() => {
 
 const clamp = (number, min, max) => Math.max(min, Math.min(number, max));
 
-watch(code, (newCode) => {
+watch([code, noWarnings], ([newCode, noWarnings]) => {
 	try {
-		compiledResult.value = run(newCode);
+		compiledResult.value = run(newCode, noWarnings);
 
 		if (compiledResult.value.code?.client.defs && compiledResult.value.code?.server.defs) {
 			isTypeScript.value = true
@@ -143,6 +149,10 @@ const saveURL = () => {
 
 	go(`/playground?code=${result}`)
 }
+
+const toggleNoWarnings = () => {
+	noWarnings.value = !noWarnings.value
+}
 </script>
 
 <style>
@@ -150,7 +160,10 @@ const saveURL = () => {
 	width: 100%;
 	height: 60vh;
 }
-
+.flex {
+	display: flex;
+	gap: 16px;
+}
 .button {
 	padding: 12px;
 	width: fit-content;

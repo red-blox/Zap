@@ -7,9 +7,10 @@ mod parser;
 use wasm_bindgen::prelude::*;
 
 #[cfg(not(target_arch = "wasm32"))]
-use codespan_reporting::diagnostic::Diagnostic;
+use codespan_reporting::diagnostic::{Diagnostic, Severity};
 #[cfg(target_arch = "wasm32")]
 use codespan_reporting::{
+	diagnostic::Severity,
 	files::SimpleFile,
 	term::{self, termcolor::NoColor},
 };
@@ -57,37 +58,43 @@ pub struct Return {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn run(input: &str) -> Return {
+pub fn run(input: &str, no_warnings: bool) -> Return {
 	let (config, reports) = parser::parse(input);
+	let diagnostics = reports
+		.into_iter()
+		.map(|report| report.to_diagnostic(no_warnings))
+		.collect::<Vec<Diagnostic<()>>>();
 
-	if let Some(config) = config {
-		Return {
-			code: Some(Code {
-				server: Output {
-					path: config.server_output.into(),
-					code: output::luau::server::code(&config),
-					defs: output::typescript::server::code(&config),
-				},
-				client: Output {
-					path: config.client_output.into(),
-					code: output::luau::client::code(&config),
-					defs: output::typescript::client::code(&config),
-				},
-				tooling: output::tooling::output(&config),
-			}),
-			diagnostics: reports.into_iter().map(|report| report.into()).collect(),
+	if !diagnostics.iter().any(|diag| diag.severity == Severity::Error) {
+		if let Some(config) = config {
+			return Return {
+				code: Some(Code {
+					server: Output {
+						path: config.server_output.into(),
+						code: output::luau::server::code(&config),
+						defs: output::typescript::server::code(&config),
+					},
+					client: Output {
+						path: config.client_output.into(),
+						code: output::luau::client::code(&config),
+						defs: output::typescript::client::code(&config),
+					},
+					tooling: output::tooling::output(&config),
+				}),
+				diagnostics,
+			};
 		}
-	} else {
-		Return {
-			code: None,
-			diagnostics: reports.into_iter().map(|report| report.into()).collect(),
-		}
+	}
+
+	Return {
+		code: None,
+		diagnostics,
 	}
 }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn run(input: &str) -> Return {
+pub fn run(input: &str, no_warnings: bool) -> Return {
 	let (config, reports) = parser::parse(input);
 
 	let mut writer = NoColor::new(Vec::new());
@@ -95,31 +102,41 @@ pub fn run(input: &str) -> Return {
 	let file = SimpleFile::new("input.zap", input);
 	let term_config = term::Config::default();
 
+	let mut no_errors = true;
+
 	for report in reports {
-		term::emit(&mut writer, &term_config, &file, &report.into()).unwrap();
+		let diagnostic = report.to_diagnostic(no_warnings);
+
+		if diagnostic.severity == Severity::Error {
+			no_errors = false;
+		}
+
+		term::emit(&mut writer, &term_config, &file, &diagnostic).unwrap();
 	}
 
 	let diagnostics = String::from_utf8(writer.into_inner()).unwrap();
 
-	if let Some(config) = config {
-		Return {
-			code: Some(Code {
-				server: Output {
-					code: output::luau::server::code(&config),
-					defs: output::typescript::server::code(&config),
-				},
-				client: Output {
-					code: output::luau::client::code(&config),
-					defs: output::typescript::client::code(&config),
-				},
-				tooling: output::tooling::output(&config),
-			}),
-			diagnostics,
+	if no_errors {
+		if let Some(config) = config {
+			return Return {
+				code: Some(Code {
+					server: Output {
+						code: output::luau::server::code(&config),
+						defs: output::typescript::server::code(&config),
+					},
+					client: Output {
+						code: output::luau::client::code(&config),
+						defs: output::typescript::client::code(&config),
+					},
+					tooling: output::tooling::output(&config),
+				}),
+				diagnostics,
+			};
 		}
-	} else {
-		Return {
-			code: None,
-			diagnostics,
-		}
+	}
+
+	Return {
+		code: None,
+		diagnostics,
 	}
 }

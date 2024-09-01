@@ -17,6 +17,9 @@ use zap::run;
 struct Args {
 	#[arg(default_value = "net.zap")]
 	config: Option<PathBuf>,
+	/// Convert all warnings to errors
+	#[clap(long)]
+	no_warnings: bool,
 }
 
 fn main() -> Result<()> {
@@ -26,7 +29,7 @@ fn main() -> Result<()> {
 
 	let config = std::fs::read_to_string(&config_path)?;
 
-	let ret = run(config.as_str());
+	let ret = run(config.as_str(), args.no_warnings);
 
 	let code = ret.code;
 	let diagnostics = ret.diagnostics;
