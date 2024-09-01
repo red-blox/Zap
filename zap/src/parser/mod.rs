@@ -1,4 +1,3 @@
-use codespan_reporting::diagnostic::Severity;
 use lalrpop_util::{lalrpop_mod, ParseError};
 
 use crate::config::Config;
@@ -17,11 +16,7 @@ pub fn parse(input: &str) -> (Option<Config<'_>>, Vec<Report<'_>>) {
 	if let Ok(syntax_config) = parse_result {
 		let (config, reports) = convert::convert(syntax_config);
 
-		if reports.iter().any(|report| report.severity() == Severity::Error) {
-			(None, reports)
-		} else {
-			(Some(config), reports)
-		}
+		(Some(config), reports)
 	} else {
 		let report = match parse_result.unwrap_err() {
 			ParseError::InvalidToken { location } => Report::LexerInvalidToken {
