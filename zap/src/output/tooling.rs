@@ -281,6 +281,38 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line("local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")");
 		self.push("\n");
 
+		self.push_line("-- thanks to https://dom.rojo.space/binary.html#cframe");
+		self.push_line("local CFrameSpecialCases = {");
+		self.indent();
+
+		self.push_line("CFrame.Angles(0, 0, 0),");
+		self.push_line("CFrame.Angles(math.rad(90), 0, 0),");
+		self.push_line("CFrame.Angles(0, math.rad(180), math.rad(180)),");
+		self.push_line("CFrame.Angles(math.rad(-90), 0, 0),");
+		self.push_line("CFrame.Angles(0, math.rad(180), math.rad(90)),");
+		self.push_line("CFrame.Angles(0, math.rad(90), math.rad(90)),");
+		self.push_line("CFrame.Angles(0, 0, math.rad(90)),");
+		self.push_line("CFrame.Angles(0, math.rad(-90), math.rad(90)),");
+		self.push_line("CFrame.Angles(math.rad(-90), math.rad(-90), 0),");
+		self.push_line("CFrame.Angles(0, math.rad(-90), 0),");
+		self.push_line("CFrame.Angles(math.rad(90), math.rad(-90), 0),");
+		self.push_line("CFrame.Angles(0, math.rad(90), math.rad(180)),");
+		self.push_line("CFrame.Angles(0, math.rad(-90), math.rad(180)),");
+		self.push_line("CFrame.Angles(0, math.rad(180), math.rad(0)),");
+		self.push_line("CFrame.Angles(math.rad(-90), math.rad(-180), math.rad(0)),");
+		self.push_line("CFrame.Angles(0, math.rad(0), math.rad(180)),");
+		self.push_line("CFrame.Angles(math.rad(90), math.rad(180), math.rad(0)),");
+		self.push_line("CFrame.Angles(0, math.rad(0), math.rad(-90)),");
+		self.push_line("CFrame.Angles(0, math.rad(-90), math.rad(-90)),");
+		self.push_line("CFrame.Angles(0, math.rad(-180), math.rad(-90)),");
+		self.push_line("CFrame.Angles(0, math.rad(90), math.rad(-90)),");
+		self.push_line("CFrame.Angles(math.rad(90), math.rad(90), 0),");
+		self.push_line("CFrame.Angles(0, math.rad(90), 0),");
+		self.push_line("CFrame.Angles(math.rad(-90), math.rad(90), 0),");
+
+		self.dedent();
+		self.push_line("}\n");
+
 		self.push_line("return function(remote_instance, player, incoming_buff, incoming_inst)");
 		self.indent();
 
