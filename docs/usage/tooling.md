@@ -1,6 +1,6 @@
-# Tooling Intergration
+# Tooling Integration
 
-Zap supports the ability to output a lua file that can deseralise compressed data so that it can be read by plugins and/or scripts such as [PacketProfiler](https://github.com/Pyseph/PacketProfiler/).
+Zap supports the ability to output a Lua file that can deseralise compressed data so that it can be read by plugins and/or scripts such as [PacketProfiler](https://github.com/Pyseph/PacketProfiler/).
 
 Zap and PacketProfiler have created a common format for this interfacing as detailed below:
 
