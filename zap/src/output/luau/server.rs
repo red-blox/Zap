@@ -73,7 +73,11 @@ impl<'a> ServerOutput<'a> {
 				}
 			} else {
 				self.push_line(&format!("{fire} = noop,"));
-				self.push_line(&format!("{fire_all} = noop,"));
+
+				if !self.config.disable_fire_all {
+					self.push_line(&format!("{fire_all} = noop,"));
+				}
+
 				self.push_line(&format!("{fire_except} = noop,"));
 				self.push_line(&format!("{fire_list} = noop,"));
 				self.push_line(&format!("{fire_set} = noop"));
@@ -719,7 +723,11 @@ impl<'a> ServerOutput<'a> {
 			self.indent();
 
 			self.push_return_fire(ev);
-			self.push_return_fire_all(ev);
+
+			if !self.config.disable_fire_all {
+				self.push_return_fire_all(ev);
+			}
+
 			self.push_return_fire_except(ev);
 			self.push_return_fire_list(ev);
 			self.push_return_fire_set(ev);

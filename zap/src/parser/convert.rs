@@ -104,6 +104,7 @@ impl<'src> Converter<'src> {
 		let casing = self.casing_opt(&config.opts);
 		let yield_type = self.yield_type_opt(typescript, &config.opts);
 		let async_lib = self.async_lib(yield_type, &config.opts, typescript);
+		let (disable_fire_all, ..) = self.boolean_opt("disable_fire_all", false, &config.opts);
 
 		let config = Config {
 			tydecls,
@@ -129,6 +130,7 @@ impl<'src> Converter<'src> {
 			casing,
 			yield_type,
 			async_lib,
+			disable_fire_all,
 		};
 
 		(config, self.reports)

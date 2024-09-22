@@ -297,3 +297,15 @@ This option will add an additional element to the start of the [arguments array]
 ### Example
 
 <CodeBlock :code="toolingShowInternalDataExample" />
+
+## `disable_fire_all`
+
+This option determines if Zap should generate a `.FireAll` method on the server side. This is useful to turn off to prevent footguns if you're only ever sending events to loaded players.
+
+### Default
+
+`false`
+
+### Example
+
+<CodeBlock code="opt disable_fire_all = true" />

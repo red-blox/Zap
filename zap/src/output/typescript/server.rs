@@ -155,7 +155,11 @@ impl<'a> ServerOutput<'a> {
 			self.indent();
 
 			self.push_return_fire(ev);
-			self.push_return_fire_all(ev);
+
+			if !self.config.disable_fire_all {
+				self.push_return_fire_all(ev);
+			}
+
 			self.push_return_fire_except(ev);
 			self.push_return_fire_list(ev);
 			self.push_return_fire_set(ev);

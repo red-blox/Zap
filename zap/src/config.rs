@@ -28,6 +28,7 @@ pub struct Config<'src> {
 	pub casing: Casing,
 	pub yield_type: YieldType,
 	pub async_lib: &'src str,
+	pub disable_fire_all: bool,
 }
 
 impl<'src> Config<'src> {
