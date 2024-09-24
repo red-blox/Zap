@@ -984,6 +984,8 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("end");
 		}
 		self.push_line("");
+		self.push_line("table.freeze(polling_player_queues)");
+		self.push_line("table.freeze(polling_payload_queues)");
 		self.push_line("table.freeze(polling_iterators)");
 		self.push_line("");
 	}
