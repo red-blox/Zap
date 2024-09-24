@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::config::{Casing, Config, Enum, EvDecl, EvType, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType};
+use crate::config::{
+	Casing, Config, Enum, EvDecl, EvType, EventHandling, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType,
+};
 
 use super::{
 	reports::{Report, Span},
@@ -93,6 +95,7 @@ impl<'src> Converter<'src> {
 
 		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
 		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
+		let event_handling = self.event_handling_opt(&config.opts);
 
 		let (remote_scope, ..) = self.str_opt("remote_scope", "ZAP", &config.opts);
 		let (remote_folder, ..) = self.str_opt("remote_folder", "ZAP", &config.opts);
@@ -119,6 +122,7 @@ impl<'src> Converter<'src> {
 
 			write_checks,
 			manual_event_loop,
+			event_handling,
 
 			remote_scope,
 			remote_folder,
@@ -185,6 +189,22 @@ impl<'src> Converter<'src> {
 				YieldType::Yield
 			}
 
+			_ => unreachable!(),
+		}
+	}
+
+	fn event_handling_opt(&mut self, opts: &[SyntaxOpt<'src>]) -> EventHandling {
+		match self.str_opt("event_handling", "signal", opts) {
+			("polling", ..) => EventHandling::Polling,
+			("signal", ..) => EventHandling::Signal,
+			(_, Some(span)) => {
+				self.report(Report::AnalyzeInvalidOptValue {
+					span: span,
+					expected: "`polling` or `signal`",
+				});
+
+				EventHandling::Signal
+			}
 			_ => unreachable!(),
 		}
 	}
@@ -318,6 +338,9 @@ impl<'src> Converter<'src> {
 		let name = evdecl.name.name;
 		let from = evdecl.from;
 		let evty = evdecl.evty;
+		let handling = evdecl
+			.handling
+			.unwrap_or_else(|| self.event_handling_opt(&self.config.opts.clone()));
 		let call = evdecl.call;
 		let data = evdecl.data.as_ref().map(|ty| self.ty(ty));
 
@@ -344,6 +367,7 @@ impl<'src> Converter<'src> {
 			name,
 			from,
 			evty,
+			handling,
 			call,
 			data,
 			id,

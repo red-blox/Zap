@@ -1,6 +1,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local polling_payload_queues = {}
+local polling_queue_cursors = {}
+local polling_iterators = {}
+
 local outgoing_buff: buffer
 local outgoing_used: number
 local outgoing_size: number

@@ -35,6 +35,13 @@ This field determines the type of event. It can be either `Reliable` or `Unrelia
 - Reliable events are guaranteed to arrive at their destination in the order they were sent.
 - Unreliable events are not guaranteed to arrive at their destination, and they are not guaranteed to arrive in the order they were sent. Unreliable events also have a maximum size of 900 bytes.
 
+### `handling`
+
+Overrides the `event_handling` option, determining how your code receives Zap events.
+
+- `Polling` events store data they receive in queues, and you must pull from them when you want it.
+- `Signal` events push data to your listener functions as it's received.
+
 ### `call`
 
 This field determines how the event is listened to on the receiving side.

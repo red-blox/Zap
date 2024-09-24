@@ -191,6 +191,17 @@ impl<'a> ServerOutput<'a> {
 			let value = self.config.casing.with("Value", "value", "value");
 
 			self.push_indent();
+
+			let iter = self.config.casing.with("Iter", "iter", "iter");
+			self.push(&format!("{iter}: () => () => [Player, "));
+			if let Some(data) = &ev.data {
+				self.push_ty(data);
+			} else {
+				self.push("true");
+			}
+			self.push("];\n");
+
+			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ({player}: Player"));
 
 			if let Some(data) = &ev.data {

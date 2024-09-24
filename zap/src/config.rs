@@ -17,6 +17,7 @@ pub struct Config<'src> {
 
 	pub write_checks: bool,
 	pub manual_event_loop: bool,
+	pub event_handling: EventHandling,
 
 	pub remote_scope: &'src str,
 	pub remote_folder: &'src str,
@@ -35,6 +36,12 @@ impl<'src> Config<'src> {
 	pub fn event_id_ty(&self) -> NumTy {
 		NumTy::from_f64(1.0, self.evdecls.len() as f64)
 	}
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EventHandling {
+	Polling,
+	Signal,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -92,6 +99,7 @@ pub struct EvDecl<'src> {
 	pub name: &'src str,
 	pub from: EvSource,
 	pub evty: EvType,
+	pub handling: EventHandling,
 	pub call: EvCall,
 	pub data: Option<Ty<'src>>,
 	pub id: usize,

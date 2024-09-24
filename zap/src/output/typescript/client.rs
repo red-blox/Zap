@@ -114,6 +114,17 @@ impl<'src> ClientOutput<'src> {
 			self.indent();
 
 			self.push_indent();
+
+			let iter = self.config.casing.with("Iter", "iter", "iter");
+			self.push(&format!("{iter}: () => () => "));
+			if let Some(data) = &ev.data {
+				self.push_ty(data);
+			} else {
+				self.push("true");
+			}
+			self.push(";\n");
+
+			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ("));
 
 			if let Some(data) = &ev.data {

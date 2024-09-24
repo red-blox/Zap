@@ -1,4 +1,4 @@
-use crate::config::{EvCall, EvSource, EvType, FnCall, NumTy};
+use crate::config::{EvCall, EvSource, EvType, EventHandling, FnCall, NumTy};
 
 use super::reports::Span;
 
@@ -95,6 +95,7 @@ pub struct SyntaxEvDecl<'src> {
 	pub name: SyntaxIdentifier<'src>,
 	pub from: EvSource,
 	pub evty: EvType,
+	pub handling: Option<EventHandling>,
 	pub call: EvCall,
 	pub data: Option<SyntaxTy<'src>>,
 	pub end: usize,

@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, TyDecl},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, EventHandling, FnCall, FnDecl, TyDecl},
 	irgen::{des, ser},
 };
 
@@ -56,6 +56,7 @@ impl<'a> ServerOutput<'a> {
 		let fire_set = self.config.casing.with("FireSet", "fireSet", "fire_set");
 
 		let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
+		let iter = self.config.casing.with("Iter", "iter", "iter");
 		let on = self.config.casing.with("On", "on", "on");
 
 		let send_events = self.config.casing.with("SendEvents", "sendEvents", "send_events");
@@ -63,10 +64,18 @@ impl<'a> ServerOutput<'a> {
 		self.push_line(&format!("{send_events} = noop,"));
 
 		for ev in self.config.evdecls.iter() {
-			self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
+			if let EventHandling::Polling = ev.handling {
+				self.push_line(&format!("{name} = table.freeze(setmetatable({{", name = ev.name));
+			} else {
+				self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
+			}
 			self.indent();
 
 			if ev.from == EvSource::Client {
+				if let EventHandling::Polling = ev.handling {
+					self.push_line(&format!("{iter} = noop,"));
+				}
+
 				match ev.call {
 					EvCall::SingleSync | EvCall::SingleAsync => self.push_line(&format!("{set_callback} = noop")),
 					EvCall::ManySync | EvCall::ManyAsync => self.push_line(&format!("{on} = noop")),
@@ -84,6 +93,12 @@ impl<'a> ServerOutput<'a> {
 			}
 
 			self.dedent();
+			if let EventHandling::Polling = ev.handling {
+				self.push_line("}), {");
+				self.indent();
+				self.push_line("__iter = noop,");
+				self.dedent();
+			}
 			self.push_line("}),");
 		}
 
@@ -211,23 +226,34 @@ impl<'a> ServerOutput<'a> {
 			self.push_stmts(&des::gen(data, "value", true));
 		}
 
-		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
-			self.push_line(&format!("if events[{id}] then"))
-		} else {
-			self.push_line(&format!("for _, cb in events[{id}] do"))
+		match ev.handling {
+			EventHandling::Polling => {
+				self.push_line(&format!("table.insert(polling_player_queues[{id}], player)"));
+				// Event types without data use `true` as a placeholder.
+				self.push_line(&format!(
+					"table.insert(polling_payload_queues[{id}], if value == nil then true else value)"
+				));
+			}
+			EventHandling::Signal => {
+				if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
+					self.push_line(&format!("if events[{id}] then"))
+				} else {
+					self.push_line(&format!("for _, cb in events[{id}] do"))
+				}
+
+				self.indent();
+
+				match ev.call {
+					EvCall::SingleSync => self.push_line(&format!("events[{id}](player, value)")),
+					EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, value)")),
+					EvCall::ManySync => self.push_line("cb(player, value)"),
+					EvCall::ManyAsync => self.push_line("task.spawn(cb, player, value)"),
+				}
+
+				self.dedent();
+				self.push_line("end");
+			}
 		}
-
-		self.indent();
-
-		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, value)")),
-			EvCall::ManySync => self.push_line("cb(player, value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, player, value)"),
-		}
-
-		self.dedent();
-		self.push_line("end");
 
 		self.dedent();
 	}
@@ -838,6 +864,21 @@ impl<'a> ServerOutput<'a> {
 		self.push_line("end,");
 	}
 
+	fn push_explicit_iter(&mut self, ev: &EvDecl) {
+		let iter = self.config.casing.with("Iter", "iter", "iter");
+		let id = ev.id;
+		self.push_indent();
+		self.push(&format!("{iter} = polling_iterators[{id}] :: () -> "));
+		if let Some(data) = &ev.data {
+			self.push("(() -> ");
+			self.push_ty(&data);
+			self.push(")");
+		} else {
+			self.push("(() -> (player, true)")
+		}
+		self.push(",\n");
+	}
+
 	pub fn push_return_listen(&mut self) {
 		for ev in self
 			.config
@@ -845,8 +886,15 @@ impl<'a> ServerOutput<'a> {
 			.iter()
 			.filter(|ev_decl| ev_decl.from == EvSource::Client)
 		{
-			self.push_line(&format!("{} = {{", ev.name));
+			match ev.handling {
+				EventHandling::Polling => self.push_line(&format!("{name} = setmetatable({{", name = ev.name)),
+				EventHandling::Signal => self.push_line(&format!("{name} = {{", name = ev.name)),
+			}
 			self.indent();
+
+			if let EventHandling::Polling = ev.handling {
+				self.push_explicit_iter(ev);
+			}
 
 			match ev.call {
 				EvCall::SingleSync | EvCall::SingleAsync => self.push_return_setcallback(ev),
@@ -854,7 +902,26 @@ impl<'a> ServerOutput<'a> {
 			}
 
 			self.dedent();
-			self.push_line("},");
+			match ev.handling {
+				EventHandling::Polling => {
+					self.push_indent();
+					self.push("}, {\n");
+					self.indent();
+					let id = ev.id;
+					self.push_indent();
+					self.push(&format!("__iter = polling_iterators[{id}] :: () -> "));
+					if let Some(data) = &ev.data {
+						self.push("(() -> ");
+						self.push_ty(&data);
+						self.push("),\n");
+					} else {
+						self.push("(() -> (player, true)),\n")
+					}
+					self.dedent();
+					self.push_line("}),");
+				}
+				EventHandling::Signal => self.push_line("},"),
+			}
 		}
 
 		for fndecl in self.config.fndecls.iter() {
@@ -866,6 +933,59 @@ impl<'a> ServerOutput<'a> {
 			self.dedent();
 			self.push_line("},");
 		}
+	}
+
+	pub fn push_polling(&mut self) {
+		let filtered_evdecls = self
+			.config
+			.evdecls
+			.iter()
+			.filter(|evdecl| evdecl.from == EvSource::Client)
+			.filter(|evdecl| evdecl.handling == EventHandling::Polling);
+
+		let is_polling_used = filtered_evdecls.clone().next().is_some();
+		if is_polling_used {
+			self.push_line("");
+		}
+
+		for evdecl in filtered_evdecls {
+			let id = evdecl.id;
+			self.push_line(&format!("polling_payload_queues[{id}] = {{}}"));
+			self.push_line(&format!("polling_player_queues[{id}] = {{}}"));
+			self.push_line(&format!("polling_queue_cursors[{id}] = 0"));
+
+			// Iterator functions are defined outside `returns` so both implicit and explicit iteration can reference the same function.
+			// A table is used to avoid the local variable limit.
+			self.push_line(&format!("polling_iterators[{id}] = function()"));
+			self.indent();
+			self.push_line(&format!("return function()"));
+			self.indent();
+			self.push_line(&format!("local player_queue = polling_player_queues[{id}]"));
+			self.push_line(&format!("local payload_queue = polling_payload_queues[{id}]"));
+			self.push_line(&format!("local cursor = polling_queue_cursors[{id}] + 1"));
+			self.push_line(&format!("local value = payload_queue[cursor]"));
+			self.push_line(&format!("if value then"));
+			self.indent();
+			self.push_line("local player = player_queue[cursor]");
+			self.push_line(&format!("polling_queue_cursors[{id}] = cursor"));
+			self.push_line("return player, value");
+			self.dedent();
+			self.push_line("else");
+			self.indent();
+			self.push_line(&format!("polling_queue_cursors[{id}] = 0"));
+			self.push_line(&format!("table.clear(player_queue)"));
+			self.push_line("table.clear(payload_queue)");
+			self.push_line("return nil");
+			self.dedent();
+			self.push_line("end");
+			self.dedent();
+			self.push_line("end");
+			self.dedent();
+			self.push_line("end");
+		}
+		self.push_line("");
+		self.push_line("table.freeze(polling_iterators)");
+		self.push_line("");
 	}
 
 	pub fn push_return(&mut self) {
@@ -975,6 +1095,8 @@ impl<'a> ServerOutput<'a> {
 
 		self.push(include_str!("base.luau"));
 
+		self.push_line("local polling_player_queues = {}");
+
 		self.push_studio();
 
 		self.push_check_client();
@@ -1007,6 +1129,8 @@ impl<'a> ServerOutput<'a> {
 		{
 			self.push_unreliable();
 		}
+
+		self.push_polling();
 
 		self.push_return();
 
