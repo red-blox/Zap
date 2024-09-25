@@ -1,7 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use core::panic;
+use std::{collections::{HashMap, HashSet}, task::Poll};
 
 use crate::config::{
-	Casing, Config, Enum, EvDecl, EvType, EventHandling, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType,
+	Casing, Config, Enum, EvCall, EvDecl, EvType, EventHandling, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType,
 };
 
 use super::{
@@ -95,7 +96,6 @@ impl<'src> Converter<'src> {
 
 		let (write_checks, ..) = self.boolean_opt("write_checks", true, &config.opts);
 		let (manual_event_loop, ..) = self.boolean_opt("manual_event_loop", false, &config.opts);
-		let event_handling = self.event_handling_opt(&config.opts);
 
 		let (remote_scope, ..) = self.str_opt("remote_scope", "ZAP", &config.opts);
 		let (remote_folder, ..) = self.str_opt("remote_folder", "ZAP", &config.opts);
@@ -122,7 +122,6 @@ impl<'src> Converter<'src> {
 
 			write_checks,
 			manual_event_loop,
-			event_handling,
 
 			remote_scope,
 			remote_folder,
@@ -338,10 +337,11 @@ impl<'src> Converter<'src> {
 		let name = evdecl.name.name;
 		let from = evdecl.from;
 		let evty = evdecl.evty;
-		let handling = evdecl
-			.handling
-			.unwrap_or_else(|| self.event_handling_opt(&self.config.opts.clone()));
-		let call = evdecl.call;
+		let call = evdecl.call.unwrap_or_else(|| if let EventHandling::Polling = self.event_handling_opt(&self.config.opts.clone()) {
+			EvCall::Polling
+		} else {
+			panic!();
+		});
 		let data = evdecl.data.as_ref().map(|ty| self.ty(ty));
 
 		if data.is_some() && evty == EvType::Unreliable {
@@ -367,7 +367,6 @@ impl<'src> Converter<'src> {
 			name,
 			from,
 			evty,
-			handling,
 			call,
 			data,
 			id,

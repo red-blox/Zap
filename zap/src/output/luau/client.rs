@@ -1,7 +1,7 @@
 use std::collections::binary_heap::PeekMut;
 
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, EventHandling, FnDecl, TyDecl, YieldType},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, TyDecl, YieldType},
 	irgen::{des, ser},
 };
 
@@ -62,7 +62,7 @@ impl<'src> ClientOutput<'src> {
 		self.push_line(&format!("{send_events} = noop,"));
 
 		for ev in self.config.evdecls.iter() {
-			if let EventHandling::Polling = ev.handling {
+			if let EvCall::Polling = ev.call {
 				self.push_line(&format!("{name} = table.freeze(setmetatable({{", name = ev.name));
 			} else {
 				self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
@@ -72,18 +72,19 @@ impl<'src> ClientOutput<'src> {
 			if ev.from == EvSource::Client {
 				self.push_line(&format!("{fire} = noop,"));
 			} else {
-				if let EventHandling::Polling = ev.handling {
+				if let EvCall::Polling = ev.call {
 					self.push_line(&format!("{iter} = noop,"));
 				}
 
 				match ev.call {
 					EvCall::SingleSync | EvCall::SingleAsync => self.push_line(&format!("{set_callback} = noop,")),
 					EvCall::ManySync | EvCall::ManyAsync => self.push_line(&format!("{on} = noop,")),
+					_ => unreachable!(),
 				}
 			}
 
 			self.dedent();
-			if let EventHandling::Polling = ev.handling {
+			if let EvCall::Polling = ev.call {
 				self.push_line("}), {");
 				self.indent();
 				self.push_line("__iter = noop,");
@@ -216,14 +217,14 @@ impl<'src> ClientOutput<'src> {
 			self.push_stmts(&des::gen(data, "value", true));
 		}
 
-		match ev.handling {
-			EventHandling::Polling => {
+		match ev.call {
+			EvCall::Polling => {
 				// Event types without data use `true` as a placeholder.
 				self.push_line(&format!(
 					"table.insert(polling_payload_queues[{id}], if value == nil then true else value)"
 				));
 			}
-			EventHandling::Signal => {
+			_ => {
 				if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
 					self.push_line(&format!("if events[{id}] then"));
 				} else {
@@ -242,6 +243,7 @@ impl<'src> ClientOutput<'src> {
 					EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], value)")),
 					EvCall::ManySync => self.push_line("cb(value)"),
 					EvCall::ManyAsync => self.push_line("task.spawn(cb, value)"),
+					_ => unreachable!(),
 				}
 
 				if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
@@ -420,6 +422,7 @@ impl<'src> ClientOutput<'src> {
 			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], value)")),
 			EvCall::ManySync => self.push_line("cb(value)"),
 			EvCall::ManyAsync => self.push_line("task.spawn(cb, value)"),
+			_ => (),
 		}
 
 		if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
@@ -740,24 +743,26 @@ impl<'src> ClientOutput<'src> {
 			.iter()
 			.filter(|ev_decl| ev_decl.from == EvSource::Server)
 		{
-			match ev.handling {
-				EventHandling::Polling => self.push_line(&format!("{name} = setmetatable({{", name = ev.name)),
-				EventHandling::Signal => self.push_line(&format!("{name} = {{", name = ev.name)),
+			if let EvCall::Polling = ev.call {
+				self.push_line(&format!("{name} = setmetatable({{", name = ev.name));
+			} else {
+				self.push_line(&format!("{name} = {{", name = ev.name));
 			}
 			self.indent();
 
-			if let EventHandling::Polling = ev.handling {
+			if let EvCall::Polling = ev.call {
 				self.push_explicit_iter(ev);
 			}
 
 			match ev.call {
 				EvCall::SingleSync | EvCall::SingleAsync => self.push_return_setcallback(ev),
 				EvCall::ManySync | EvCall::ManyAsync => self.push_return_on(ev),
+				_ => (),
 			}
 
 			self.dedent();
-			match ev.handling {
-				EventHandling::Polling => {
+			match ev.call {
+				EvCall::Polling => {
 					self.push_indent();
 					self.push("}, {\n");
 					self.indent();
@@ -774,7 +779,7 @@ impl<'src> ClientOutput<'src> {
 					self.dedent();
 					self.push_line("}),");
 				}
-				EventHandling::Signal => self.push_line("},"),
+			 	_ => self.push_line("},"),
 			}
 		}
 	}
@@ -881,7 +886,7 @@ impl<'src> ClientOutput<'src> {
 			.evdecls
 			.iter()
 			.filter(|evdecl| evdecl.from == EvSource::Server)
-			.filter(|evdecl| evdecl.handling == EventHandling::Polling);
+			.filter(|evdecl| evdecl.call == EvCall::Polling);
 
 		let is_polling_used = filtered_evdecls.clone().next().is_some();
 		if is_polling_used {

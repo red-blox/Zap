@@ -17,7 +17,6 @@ pub struct Config<'src> {
 
 	pub write_checks: bool,
 	pub manual_event_loop: bool,
-	pub event_handling: EventHandling,
 
 	pub remote_scope: &'src str,
 	pub remote_folder: &'src str,
@@ -99,7 +98,6 @@ pub struct EvDecl<'src> {
 	pub name: &'src str,
 	pub from: EvSource,
 	pub evty: EvType,
-	pub handling: EventHandling,
 	pub call: EvCall,
 	pub data: Option<Ty<'src>>,
 	pub id: usize,
@@ -123,6 +121,7 @@ pub enum EvCall {
 	SingleAsync,
 	ManySync,
 	ManyAsync,
+	Polling,
 }
 
 #[derive(Debug, Clone)]

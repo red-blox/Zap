@@ -185,6 +185,7 @@ impl<'a> ServerOutput<'a> {
 					self.config.casing.with("SetCallback", "setCallback", "set_callback")
 				}
 				EvCall::ManySync | EvCall::ManyAsync => self.config.casing.with("On", "on", "on"),
+				_ => todo!(),
 			};
 			let callback = self.config.casing.with("Callback", "callback", "callback");
 			let player = self.config.casing.with("Player", "player", "player");

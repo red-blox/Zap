@@ -58,11 +58,10 @@ EvDecl: SyntaxEvDecl<'input> = {
     <start:@L> "event" <name:Identifier> "=" "{"
         "from" ":" <from:EvSource>
         "," "type" ":" <evty:EvTy>
-        <handling:("," "handling" ":" <EvHandling>)?>
-        "," "call" ":" <call:EvCall> 
+        <call:("," "call" ":" <EvCall>)?>
         <data:("," "data" ":" <Ty>)?>
         ","?
-    "}" ";"? <end:@R> => SyntaxEvDecl { start, name, from, evty, handling, call, data, end },
+    "}" ";"? <end:@R> => SyntaxEvDecl { start, name, from, evty, call, data, end },
 }
 
 EvCall: EvCall = {
@@ -70,16 +69,12 @@ EvCall: EvCall = {
     "SingleAsync" => EvCall::SingleAsync,
     "ManySync" => EvCall::ManySync,
     "ManyAsync" => EvCall::ManyAsync,
+    "Polling" => EvCall::Polling,
 }
 
 EvTy: EvType = {
     "Reliable" => EvType::Reliable,
     "Unreliable" => EvType::Unreliable,
-}
-
-EvHandling: EventHandling = {
-    "Polling" => EventHandling::Polling,
-    "Signal" => EventHandling::Signal,
 }
 
 EvSource: EvSource = {
