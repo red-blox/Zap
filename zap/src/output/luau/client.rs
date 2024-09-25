@@ -1,5 +1,3 @@
-use std::collections::binary_heap::PeekMut;
-
 use crate::{
 	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, TyDecl, YieldType},
 	irgen::{des, ser},
