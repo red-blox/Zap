@@ -777,7 +777,7 @@ impl<'src> ClientOutput<'src> {
 					self.dedent();
 					self.push_line("}),");
 				}
-			 	_ => self.push_line("},"),
+				_ => self.push_line("},"),
 			}
 		}
 	}

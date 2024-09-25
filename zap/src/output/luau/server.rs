@@ -233,8 +233,7 @@ impl<'a> ServerOutput<'a> {
 			self.push_line(&format!(
 				"table.insert(polling_payload_queues[{id}], if value == nil then true else value)"
 			));
-		}
-		else {
+		} else {
 			if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
 				self.push_line(&format!("if events[{id}] then"))
 			} else {

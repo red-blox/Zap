@@ -1,5 +1,8 @@
 use core::panic;
-use std::{collections::{HashMap, HashSet}, task::Poll};
+use std::{
+	collections::{HashMap, HashSet},
+	task::Poll,
+};
 
 use crate::config::{
 	Casing, Config, Enum, EvCall, EvDecl, EvType, EventHandling, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType,
@@ -337,10 +340,12 @@ impl<'src> Converter<'src> {
 		let name = evdecl.name.name;
 		let from = evdecl.from;
 		let evty = evdecl.evty;
-		let call = evdecl.call.unwrap_or_else(|| if let EventHandling::Polling = self.event_handling_opt(&self.config.opts.clone()) {
-			EvCall::Polling
-		} else {
-			panic!();
+		let call = evdecl.call.unwrap_or_else(|| {
+			if let EventHandling::Polling = self.event_handling_opt(&self.config.opts.clone()) {
+				EvCall::Polling
+			} else {
+				panic!();
+			}
 		});
 		let data = evdecl.data.as_ref().map(|ty| self.ty(ty));
 
