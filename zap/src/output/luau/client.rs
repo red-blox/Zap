@@ -896,8 +896,6 @@ impl<'src> ClientOutput<'src> {
 			self.push_line(&format!("polling_payload_queues[{id}] = {{}}"));
 			self.push_line(&format!("polling_queue_cursors[{id}] = 0"));
 
-			// Iterator functions are defined outside `returns` so both implicit and explicit iteration can reference the same function.
-			// A table is used to avoid the local variable limit.
 			self.push_line(&format!("polling_iterators[{id}] = function()"));
 			self.indent();
 			self.push_line(&format!("return function()"));
