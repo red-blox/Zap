@@ -52,7 +52,7 @@ This field determines how the event is listened to on the receiving side.
 
 ### Polling example
 
-<CodeBlock :code="handleExample" />
+<CodeBlock :code="pollingExample" />
 
 ::: danger
 Synchronous events are not recommended, and should only be used when performance is critical.
