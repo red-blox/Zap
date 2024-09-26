@@ -60,7 +60,7 @@ impl<'src> ClientOutput<'src> {
 		self.push_line(&format!("{send_events} = noop,"));
 
 		for ev in self.config.evdecls.iter() {
-			if let EvCall::Polling = ev.call {
+			if ev.call == EvCall::Polling && ev.from == EvSource::Server {
 				self.push_line(&format!("{name} = table.freeze(setmetatable({{", name = ev.name));
 			} else {
 				self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
@@ -70,19 +70,15 @@ impl<'src> ClientOutput<'src> {
 			if ev.from == EvSource::Client {
 				self.push_line(&format!("{fire} = noop,"));
 			} else {
-				if let EvCall::Polling = ev.call {
-					self.push_line(&format!("{iter} = noop,"));
-				}
-
 				match ev.call {
 					EvCall::SingleSync | EvCall::SingleAsync => self.push_line(&format!("{set_callback} = noop,")),
 					EvCall::ManySync | EvCall::ManyAsync => self.push_line(&format!("{on} = noop,")),
-					_ => unreachable!(),
+					EvCall::Polling => self.push_line(&format!("{iter} = noop,")),
 				}
 			}
 
 			self.dedent();
-			if let EvCall::Polling = ev.call {
+			if ev.call == EvCall::Polling && ev.from == EvSource::Server {
 				self.push_line("}), {");
 				self.indent();
 				self.push_line("__iter = noop,");
