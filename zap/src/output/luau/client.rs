@@ -908,12 +908,12 @@ impl<'src> ClientOutput<'src> {
 			self.push_line(&format!("if value then"));
 			self.indent();
 			self.push_line(&format!("polling_queue_cursors[{id}] = cursor"));
+			self.push_line("payload_queue[cursor] = nil");
 			self.push_line("return value");
 			self.dedent();
 			self.push_line("else");
 			self.indent();
 			self.push_line(&format!("polling_queue_cursors[{id}] = 0"));
-			self.push_line("table.clear(payload_queue)");
 			self.push_line("return nil");
 			self.dedent();
 			self.push_line("end");
