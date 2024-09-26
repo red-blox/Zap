@@ -8,6 +8,11 @@ const example = `event MyEvent = {
 		bar: u8,
 	},
 }`
+
+const pollingExample = `-- Example of using a Zap polling event on the server.
+for player, payload in zap.my_event do
+	print(player, payload)
+end`
 </script>
 
 # Events
@@ -44,6 +49,10 @@ This field determines how the event is listened to on the receiving side.
 - `SingleAsync` events can be listened to by one function, and they are called asynchronously.
 - `SingleSync` events can be listened to by one function, and they are called synchronously.
 - `Polling` events are received by iterating through the event.
+
+### Polling example
+
+<CodeBlock :code="handleExample" />
 
 ::: danger
 Synchronous events are not recommended, and should only be used when performance is critical.
