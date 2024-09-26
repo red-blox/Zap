@@ -866,11 +866,11 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{iter} = polling_iterators[{id}] :: () -> "));
 		if let Some(data) = &ev.data {
-			self.push("(() -> ");
+			self.push("(() -> (Player, ");
 			self.push_ty(&data);
-			self.push(")");
+			self.push("))");
 		} else {
-			self.push("(() -> (player, true)")
+			self.push("(() -> (Player, true)")
 		}
 		self.push(",\n");
 	}
@@ -908,11 +908,11 @@ impl<'a> ServerOutput<'a> {
 					self.push_indent();
 					self.push(&format!("__iter = polling_iterators[{id}] :: () -> "));
 					if let Some(data) = &ev.data {
-						self.push("(() -> ");
+						self.push("(() -> (Player, ");
 						self.push_ty(&data);
-						self.push("),\n");
+						self.push(")),\n");
 					} else {
-						self.push("(() -> (player, true)),\n")
+						self.push("(() -> (Player, true)),\n")
 					}
 					self.dedent();
 					self.push_line("}),");
