@@ -195,19 +195,39 @@ impl<'src> Converter<'src> {
 		}
 	}
 
-	fn event_handling_opt(&mut self, opts: &[SyntaxOpt<'src>]) -> EventHandling {
-		match self.str_opt("event_handling", "signal", opts) {
-			("polling", ..) => EventHandling::Polling,
-			("signal", ..) => EventHandling::Signal,
+	fn call_default_opt(&mut self, opts: &[SyntaxOpt<'src>]) -> Option<EvCall> {
+		let mut value: Option<&str> = None;
+		let mut span = None;
+
+		for opt in opts.iter().filter(|opt| opt.name.name == "call_default") {
+			if let SyntaxOptValueKind::Str(opt_value) = &opt.value.kind {
+				value = Some(self.str(opt_value));
+				span = Some(opt_value.span());
+			} else {
+				self.report(Report::AnalyzeInvalidOptValue {
+					span: opt.value.span(),
+					expected: "`SingleSync`, `ManySync`, `SingleAsync`, `ManyAsync`, or `Polling`",
+				});
+			}
+		}
+
+		match (value, span) {
+			(Some("SingleSync"), ..) => Some(EvCall::SingleSync),
+			(Some("ManySync"), ..) => Some(EvCall::ManySync),
+			(Some("SingleAsync"), ..) => Some(EvCall::SingleAsync),
+			(Some("ManyAsync"), ..) => Some(EvCall::ManyAsync),
+			(Some("Polling"), ..) => Some(EvCall::Polling),
+
 			(_, Some(span)) => {
 				self.report(Report::AnalyzeInvalidOptValue {
-					span: span,
-					expected: "`polling` or `signal`",
+					span,
+					expected: "`SingleSync`, `ManySync`, `SingleAsync`, `ManyAsync`, or `Polling`",
 				});
 
-				EventHandling::Signal
+				None
 			}
-			_ => unreachable!(),
+
+			_ => None,
 		}
 	}
 
@@ -341,10 +361,13 @@ impl<'src> Converter<'src> {
 		let from = evdecl.from;
 		let evty = evdecl.evty;
 		let call = evdecl.call.unwrap_or_else(|| {
-			if let EventHandling::Polling = self.event_handling_opt(&self.config.opts.clone()) {
-				EvCall::Polling
+			if let Some(default) = self.call_default_opt(&self.config.opts.clone()) {
+				default
 			} else {
-				panic!();
+				self.report(Report::AnalyzeMissingEvDeclCall { ev_span: evdecl.span() });
+
+				// This value is meaningless and not a default, it's used to allow the program to run until error reporting.
+				EvCall::ManySync
 			}
 		});
 		let data = evdecl.data.as_ref().map(|ty| self.ty(ty));

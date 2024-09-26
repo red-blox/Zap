@@ -35,13 +35,6 @@ This field determines the type of event. It can be either `Reliable` or `Unrelia
 - Reliable events are guaranteed to arrive at their destination in the order they were sent.
 - Unreliable events are not guaranteed to arrive at their destination, and they are not guaranteed to arrive in the order they were sent. Unreliable events also have a maximum size of 900 bytes.
 
-### `handling`
-
-Overrides the `event_handling` option, determining how your code receives Zap events.
-
-- `Polling` events store data they receive in queues, and you must pull from them when you want it.
-- `Signal` events push data to your listener functions as it's received.
-
 ### `call`
 
 This field determines how the event is listened to on the receiving side.
@@ -50,6 +43,7 @@ This field determines how the event is listened to on the receiving side.
 - `ManySync` events can be listened to by many functions, and they are called synchronously.
 - `SingleAsync` events can be listened to by one function, and they are called asynchronously.
 - `SingleSync` events can be listened to by one function, and they are called synchronously.
+- `Polling` events are received by iterating through the event.
 
 ::: danger
 Synchronous events are not recommended, and should only be used when performance is critical.

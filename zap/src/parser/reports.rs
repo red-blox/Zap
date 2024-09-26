@@ -30,6 +30,10 @@ pub enum Report<'src> {
 
 	AnalyzeEmptyEvDecls,
 
+	AnalyzeMissingEvDeclCall {
+		ev_span: Span,
+	},
+
 	AnalyzeOversizeUnreliable {
 		ev_span: Span,
 		ty_span: Span,
@@ -122,6 +126,7 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => Severity::Error,
 			Self::AnalyzeMissingOptValue { .. } => Severity::Error,
 			Self::AnalyzeDuplicateDecl { .. } => Severity::Error,
+			Self::AnalyzeMissingEvDeclCall { .. } => Severity::Error,
 		}
 	}
 
@@ -151,6 +156,9 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => "unbounded recursive type".to_string(),
 			Self::AnalyzeMissingOptValue { .. } => "missing option expected".to_string(),
 			Self::AnalyzeDuplicateDecl { name, .. } => format!("duplicate declaration '{}'", name),
+			Self::AnalyzeMissingEvDeclCall { .. } => {
+				"missing `call` field without defining `call_default` option".to_string()
+			}
 		}
 	}
 
@@ -177,6 +185,7 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => "3012",
 			Self::AnalyzeMissingOptValue { .. } => "3013",
 			Self::AnalyzeDuplicateDecl { .. } => "3014",
+			Self::AnalyzeMissingEvDeclCall { .. } => "3015",
 		}
 	}
 
@@ -272,6 +281,8 @@ impl<'src> Report<'src> {
 					Label::primary((), dup_span.clone()).with_message("duplicate declaration"),
 				]
 			}
+
+			Self::AnalyzeMissingEvDeclCall { ev_span } => vec![Label::primary((), ev_span.clone())],
 		}
 	}
 
@@ -335,6 +346,7 @@ impl<'src> Report<'src> {
 				"the {expected} option should not be empty if {required_when}"
 			)]),
 			Self::AnalyzeDuplicateDecl { .. } => None,
+			Self::AnalyzeMissingEvDeclCall { .. } => None,
 		}
 	}
 

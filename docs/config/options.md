@@ -37,21 +37,17 @@ The paths are relative to the configuration file and should point to a lua(u) fi
 
 <CodeBlock :code="outputExample" />
 
-## `event_handling`
+## `call_default`
 
-Determines the default way your code receives events from Zap. With signals, Zap pushes events as it receives them to your listener functions. With polling, Zap stores events in queues when they're received, and you pull events from those queues when you want them.
+Determines the default `call` field for events. See [here](events.html#call) for possible options.
 
 ### Default
 
-<CodeBlock code = 'opt event_handling = "signal"' />
+None, all event declarations will need a `call` field.
 
 ### Example
-<script setup lang="luau">
--- Example of using a Zap polling event on the server.
-for player, payload in zap.my_event do
-	print(player, payload)
-end
-</script>
+
+<CodeBlock code = 'opt call_default = "ManySync"' />
 
 ## `remote_scope`
 
