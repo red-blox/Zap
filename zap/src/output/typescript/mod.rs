@@ -216,6 +216,7 @@ pub trait Output: ConfigProvider {
 			} else {
 				self.push("?: ");
 				self.push_ty(ty);
+				self.push(" | undefined");
 			}
 		} else {
 			self.push(": ");
