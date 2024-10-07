@@ -1,5 +1,5 @@
 use crate::parser::{reports::Report, syntax_tree::*};
-use crate::config::{EvCall, EvSource, EvType, EventHandling, FnCall, NumTy};
+use crate::config::{EvCall, EvSource, EvType, FnCall, NumTy};
 
 use lalrpop_util::ParseError;
 

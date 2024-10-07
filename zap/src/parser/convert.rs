@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::config::{
-	Casing, Config, Enum, EvCall, EvDecl, EvType, EventHandling, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType,
+	Casing, Config, Enum, EvCall, EvDecl, EvType, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType,
 };
 
 use super::{

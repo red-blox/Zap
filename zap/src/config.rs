@@ -37,12 +37,6 @@ impl<'src> Config<'src> {
 	}
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum EventHandling {
-	Polling,
-	Signal,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum Casing {
 	Pascal,
