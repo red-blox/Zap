@@ -730,14 +730,10 @@ impl<'src> ClientOutput<'src> {
 			self.push_line(&format!("{name} = {{", name = ev.name));
 			self.indent();
 
-			if let EvCall::Polling = ev.call {
-				self.push_explicit_iter(ev);
-			}
-
 			match ev.call {
 				EvCall::SingleSync | EvCall::SingleAsync => self.push_return_setcallback(ev),
 				EvCall::ManySync | EvCall::ManyAsync => self.push_return_on(ev),
-				_ => (),
+				EvCall::Polling => self.push_explicit_iter(ev),
 			}
 
 			self.dedent();
