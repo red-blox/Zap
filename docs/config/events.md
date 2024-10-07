@@ -10,7 +10,7 @@ const example = `event MyEvent = {
 }`
 
 const pollingExample = `-- Example of using a Zap polling event on the server.
-for player, payload in zap.my_event do
+for player, payload in zap.my_event.iter() do
 	print(player, payload)
 end`
 </script>

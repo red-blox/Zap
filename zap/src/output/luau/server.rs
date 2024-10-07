@@ -64,11 +64,7 @@ impl<'a> ServerOutput<'a> {
 		self.push_line(&format!("{send_events} = noop,"));
 
 		for ev in self.config.evdecls.iter() {
-			if ev.call == EvCall::Polling && ev.from == EvSource::Client {
-				self.push_line(&format!("{name} = table.freeze(setmetatable({{", name = ev.name));
-			} else {
-				self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
-			}
+			self.push_line(&format!("{name} = table.freeze({{", name = ev.name));
 			self.indent();
 
 			if ev.from == EvSource::Client {
@@ -90,12 +86,6 @@ impl<'a> ServerOutput<'a> {
 			}
 
 			self.dedent();
-			if ev.call == EvCall::Polling && ev.from == EvSource::Client {
-				self.push_line("}), {");
-				self.indent();
-				self.push_line("__iter = noop,");
-				self.dedent();
-			}
 			self.push_line("}),");
 		}
 
@@ -882,10 +872,7 @@ impl<'a> ServerOutput<'a> {
 			.iter()
 			.filter(|ev_decl| ev_decl.from == EvSource::Client)
 		{
-			match ev.call {
-				EvCall::Polling => self.push_line(&format!("{name} = setmetatable({{", name = ev.name)),
-				_ => self.push_line(&format!("{name} = {{", name = ev.name)),
-			}
+			self.push_line(&format!("{name} = {{", name = ev.name));
 			self.indent();
 
 			if let EvCall::Polling = ev.call {
@@ -899,26 +886,7 @@ impl<'a> ServerOutput<'a> {
 			}
 
 			self.dedent();
-			match ev.call {
-				EvCall::Polling => {
-					self.push_indent();
-					self.push("}, {\n");
-					self.indent();
-					let id = ev.id;
-					self.push_indent();
-					self.push(&format!("__iter = polling_iterators[{id}] :: () -> "));
-					if let Some(data) = &ev.data {
-						self.push("(() -> (Player, ");
-						self.push_ty(&data);
-						self.push(")),\n");
-					} else {
-						self.push("(() -> (Player, true)),\n")
-					}
-					self.dedent();
-					self.push_line("}),");
-				}
-				_ => self.push_line("},"),
-			}
+			self.push_line("},");
 		}
 
 		for fndecl in self.config.fndecls.iter() {
