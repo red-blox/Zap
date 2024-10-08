@@ -203,9 +203,9 @@ impl<'src> ClientOutput<'src> {
 
 		match ev.call {
 			EvCall::Polling => {
-				// Event types without data use `true` as a placeholder.
+				let name = ev.name;
 				self.push_line(&format!(
-					"table.insert(polling_payload_queues[{id}], if value == nil then true else value)"
+					"table.insert(polling_payload_queues[{id}], if value == nil then \"Zap placeholder value for dataless event \\\"{name}\\\"\" else value)"
 				));
 			}
 			_ => {
@@ -715,7 +715,10 @@ impl<'src> ClientOutput<'src> {
 			self.push_ty(&data);
 			self.push(")");
 		} else {
-			self.push("(() -> true)")
+			let name = ev.name;
+			self.push(&format!(
+				"(() -> \"Zap placeholder value for dataless event \"{name}\"."
+			));
 		}
 		self.push(",\n");
 	}

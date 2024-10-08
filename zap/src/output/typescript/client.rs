@@ -113,7 +113,8 @@ impl<'src> ClientOutput<'src> {
 				if let Some(data) = &ev.data {
 					self.push_ty(data);
 				} else {
-					self.push("true");
+					let name = ev.name;
+					self.push(&format!("\"Zap placeholder for event \\\"{name}\\\"\""));
 				}
 				self.push(";\n");
 			} else {

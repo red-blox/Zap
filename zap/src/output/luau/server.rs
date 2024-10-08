@@ -215,9 +215,9 @@ impl<'a> ServerOutput<'a> {
 
 		if let EvCall::Polling = ev.call {
 			self.push_line(&format!("table.insert(polling_player_queues[{id}], player)"));
-			// Event types without data use `true` as a placeholder.
+			let name = ev.name;
 			self.push_line(&format!(
-				"table.insert(polling_payload_queues[{id}], if value == nil then true else value)"
+				"table.insert(polling_payload_queues[{id}], if value == nil then \"Zap placeholder value for dataless event \\\"{name}\\\"\" else value)"
 			));
 		} else {
 			if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -860,7 +860,7 @@ impl<'a> ServerOutput<'a> {
 			self.push_ty(&data);
 			self.push("))");
 		} else {
-			self.push("(() -> (Player, true)")
+			self.push("(() -> Player)")
 		}
 		self.push(",\n");
 	}
