@@ -233,6 +233,22 @@ impl Ser {
 				));
 			}
 
+			Ty::Tup(types) => {
+				for (i, ty) in types.iter().enumerate() {
+					let var = if i > 0 {
+						if let Var::Name(ref name) = from {
+							Var::Name(format!("{name}{}", i + 1))
+						} else {
+							unreachable!()
+						}
+					} else {
+						from.clone()
+					};
+
+					self.push_ty(ty, var);
+				}
+			}
+
 			Ty::Opt(ty) => {
 				self.push_stmt(Stmt::If(from_expr.clone().eq(Expr::Nil)));
 

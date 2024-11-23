@@ -131,6 +131,7 @@ pub enum Ty<'src> {
 	Arr(Box<Ty<'src>>, Range),
 	Map(Box<Ty<'src>>, Box<Ty<'src>>),
 	Set(Box<Ty<'src>>),
+	Tup(Vec<Ty<'src>>),
 	Opt(Box<Ty<'src>>),
 	Ref(&'src str),
 
@@ -205,6 +206,27 @@ impl<'src> Ty<'src> {
 			Self::Map(..) => (2, None),
 
 			Self::Set(..) => (2, None),
+
+			Self::Tup(types) => {
+				let mut min_size = 0;
+				let mut max_size = Some(0);
+
+				for ty in types {
+					let (ty_min, ty_max) = ty.size(tydecls, recursed);
+
+					min_size += ty_min;
+
+					if let Some(ty_max) = ty_max {
+						if let Some(ref mut max_size) = max_size {
+							*max_size += ty_max;
+						}
+					} else {
+						max_size = None;
+					}
+				}
+
+				(min_size, None)
+			}
 
 			Self::Opt(ty) => {
 				let (_, ty_max) = ty.size(tydecls, recursed);

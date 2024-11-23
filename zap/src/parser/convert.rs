@@ -398,15 +398,29 @@ impl<'src> Converter<'src> {
 					.unwrap_or_default(),
 			),
 
-			SyntaxTyKind::Arr(ty, len) => Ty::Arr(
-				Box::new(self.ty(ty)),
-				len.map(|len| self.checked_range_within(&len, 0.0, u16::MAX as f64))
-					.unwrap_or_default(),
-			),
+			SyntaxTyKind::Arr(ty, len) => {
+				if let Ty::Tup(_) = self.ty(ty) {
+					self.report(Report::AnalyzeInvalidTupleLocation { span: ty.span() });
+				}
+
+				Ty::Arr(
+					Box::new(self.ty(ty)),
+					len.map(|len| self.checked_range_within(&len, 0.0, u16::MAX as f64))
+						.unwrap_or_default(),
+				)
+			}
 
 			SyntaxTyKind::Map(key, val) => {
 				let key_ty = self.ty(key);
 				let val_ty = self.ty(val);
+
+				if let Ty::Tup(_) = key_ty {
+					self.report(Report::AnalyzeInvalidTupleLocation { span: key.span() });
+				}
+
+				if let Ty::Tup(_) = val_ty {
+					self.report(Report::AnalyzeInvalidTupleLocation { span: val.span() });
+				}
 
 				if let Ty::Opt(_) = key_ty {
 					self.report(Report::AnalyzeInvalidOptionalType {
@@ -420,11 +434,29 @@ impl<'src> Converter<'src> {
 			SyntaxTyKind::Set(key) => {
 				let key_ty = self.ty(key);
 
+				if let Ty::Tup(_) = key_ty {
+					self.report(Report::AnalyzeInvalidTupleLocation { span: key.span() });
+				}
+
 				Ty::Set(Box::new(key_ty))
+			}
+
+			SyntaxTyKind::Tup(types) => {
+				for ty in types {
+					if let Ty::Tup(_) = self.ty(ty) {
+						self.report(Report::AnalyzeInvalidTupleLocation { span: ty.span() });
+					}
+				}
+
+				Ty::Tup(types.iter().map(|x| self.ty(x)).collect())
 			}
 
 			SyntaxTyKind::Opt(ty) => {
 				let parsed_ty = self.ty(ty);
+
+				if let Ty::Tup(_) = self.ty(ty) {
+					self.report(Report::AnalyzeInvalidOptionalType { span: ty.span() });
+				}
 
 				if let Ty::Opt(_) = parsed_ty {
 					self.report(Report::AnalyzeInvalidOptionalType {
@@ -517,6 +549,10 @@ impl<'src> Converter<'src> {
 		let mut fields = Vec::new();
 
 		for (field, ty) in ty.fields.iter() {
+			if let Ty::Tup(_) = self.ty(ty) {
+				self.report(Report::AnalyzeInvalidTupleLocation { span: ty.span() });
+			}
+
 			fields.push((field.name, self.ty(ty)));
 		}
 

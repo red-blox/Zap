@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, TyDecl},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Ty, TyDecl},
 	irgen::{des, ser},
 };
 
@@ -186,6 +186,23 @@ impl<'a> ServerOutput<'a> {
 		));
 	}
 
+	fn get_values(&self, data: &Option<Ty>) -> String {
+		if let Some(Ty::Tup(types)) = data {
+			(1..=types.len())
+				.map(|i| {
+					if i == 1 {
+						"value".to_string()
+					} else {
+						format!("value{}", i)
+					}
+				})
+				.collect::<Vec<_>>()
+				.join(", ")
+		} else {
+			"value".to_string()
+		}
+	}
+
 	fn push_reliable_callback(&mut self, first: bool, ev: &EvDecl) {
 		let id = ev.id;
 
@@ -205,7 +222,13 @@ impl<'a> ServerOutput<'a> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		if let Some(Ty::Tup(_)) = &ev.data {
+			self.push_line(&format!("local {values}",));
+		} else {
+			self.push_line("local value");
+		}
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -220,10 +243,10 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, value)")),
-			EvCall::ManySync => self.push_line("cb(player, value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, player, value)"),
+			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, {values})")),
+			EvCall::ManySync => self.push_line(&format!("cb(player, {values})")),
+			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, player, {values})")),
 		}
 
 		self.dedent();
@@ -249,7 +272,14 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		self.push_line("local call_id = buffer.readu8(buff, read(1))");
-		self.push_line("local value");
+
+		let values = self.get_values(&fndecl.args);
+
+		if let Some(Ty::Tup(_)) = &fndecl.args {
+			self.push_line(&format!("local {values}",));
+		} else {
+			self.push_line("local value");
+		}
 
 		if let Some(data) = &fndecl.args {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -260,11 +290,35 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		if fndecl.call == FnCall::Async {
+			let args = if let Some(Ty::Tup(types)) = &fndecl.args {
+				(1..=types.len())
+					.map(|i| format!("value_{}", i))
+					.collect::<Vec<_>>()
+					.join(", ")
+			} else {
+				"value_1".to_string()
+			};
+
 			// Avoid using upvalues as an optimization.
-			self.push_line("task.spawn(function(player_2, call_id_2, value_2)");
+			self.push_line(&format!("task.spawn(function(player_2, call_id_2, {args})"));
 			self.indent();
 
-			self.push_line(&format!("local rets = events[{id}](player_2, value_2)"));
+			let rets = if let Some(Ty::Tup(types)) = &fndecl.args {
+				(1..=types.len())
+					.map(|i| {
+						if i > 1 {
+							format!("rets{}", i)
+						} else {
+							"rets".to_string()
+						}
+					})
+					.collect::<Vec<_>>()
+					.join(", ")
+			} else {
+				"rets".to_string()
+			};
+
+			self.push_line(&format!("local {rets} = events[{id}](player_2, {args})"));
 
 			self.push_line("load_player(player_2)");
 			self.push_write_event_id(fndecl.id);
@@ -279,7 +333,7 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("player_map[player_2] = save()");
 
 			self.dedent();
-			self.push_line("end, player, call_id, value)");
+			self.push_line(&format!("end, player, call_id, {values})"));
 		} else {
 			self.push_line(&format!("local rets = events[{id}](player, value)"));
 
@@ -371,7 +425,13 @@ impl<'a> ServerOutput<'a> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		if let Some(Ty::Tup(_)) = &ev.data {
+			self.push_line(&format!("local {values}",));
+		} else {
+			self.push_line("local value");
+		}
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -386,10 +446,10 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, value)")),
-			EvCall::ManySync => self.push_line("cb(player, value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, player, value)"),
+			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, {values})")),
+			EvCall::ManySync => self.push_line(&format!("cb(player, {values})")),
+			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, player, {values})")),
 		}
 
 		self.dedent();
@@ -447,6 +507,21 @@ impl<'a> ServerOutput<'a> {
 		));
 	}
 
+	fn push_tuple_arguments(&mut self, types: &[Ty]) {
+		let value = self.config.casing.with("Value", "value", "value");
+
+		for (i, ty) in types.iter().enumerate() {
+			self.push(&format!(
+				"{value}{}: ",
+				if i > 0 { (i + 1).to_string() } else { "".to_string() }
+			));
+			self.push_ty(ty);
+			if i != types.len() - 1 {
+				self.push(", ");
+			}
+		}
+	}
+
 	fn push_return_fire(&mut self, ev: &EvDecl) {
 		let ty = &ev.data;
 
@@ -458,8 +533,13 @@ impl<'a> ServerOutput<'a> {
 		self.push(&format!("{fire} = function({player}: Player"));
 
 		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+			if let Ty::Tup(types) = ty {
+				self.push(", ");
+				self.push_tuple_arguments(types);
+			} else {
+				self.push(&format!(", {value}: "));
+				self.push_ty(ty);
+			}
 		}
 
 		self.push(")\n");
@@ -499,8 +579,12 @@ impl<'a> ServerOutput<'a> {
 		self.push(&format!("{fire_all} = function("));
 
 		if let Some(ty) = ty {
-			self.push(&format!("{value}: "));
-			self.push_ty(ty);
+			if let Ty::Tup(types) = ty {
+				self.push_tuple_arguments(types);
+			} else {
+				self.push(&format!("{value}: "));
+				self.push_ty(ty);
+			}
 		}
 
 		self.push(")\n");
@@ -550,8 +634,13 @@ impl<'a> ServerOutput<'a> {
 		self.push(&format!("{fire_except} = function({except}: Player"));
 
 		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+			if let Ty::Tup(types) = ty {
+				self.push(", ");
+				self.push_tuple_arguments(types);
+			} else {
+				self.push(&format!(", {value}: "));
+				self.push_ty(ty);
+			}
 		}
 
 		self.push(")\n");
@@ -613,8 +702,13 @@ impl<'a> ServerOutput<'a> {
 		self.push(&format!("{fire_list} = function({list}: {{ Player }}"));
 
 		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+			if let Ty::Tup(types) = ty {
+				self.push(", ");
+				self.push_tuple_arguments(types);
+			} else {
+				self.push(&format!(", {value}: "));
+				self.push_ty(ty);
+			}
 		}
 
 		self.push(")\n");
@@ -668,8 +762,13 @@ impl<'a> ServerOutput<'a> {
 		self.push(&format!("{fire_set} = function({set}: {{ [Player]: true }}"));
 
 		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+			if let Ty::Tup(types) = ty {
+				self.push(", ");
+				self.push_tuple_arguments(types);
+			} else {
+				self.push(&format!(", {value}: "));
+				self.push_ty(ty);
+			}
 		}
 
 		self.push(")\n");

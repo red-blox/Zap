@@ -205,6 +205,22 @@ impl Des {
 				self.push_stmt(Stmt::End);
 			}
 
+			Ty::Tup(types) => {
+				for (i, ty) in types.iter().enumerate() {
+					let var = if i > 0 {
+						if let Var::Name(ref name) = into {
+							Var::Name(format!("{name}{}", i + 1))
+						} else {
+							unreachable!()
+						}
+					} else {
+						into.clone()
+					};
+
+					self.push_ty(ty, var);
+				}
+			}
+
 			Ty::Opt(ty) => {
 				self.push_stmt(Stmt::If(self.readu8().eq(1.0.into())));
 

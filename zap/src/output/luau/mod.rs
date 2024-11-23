@@ -84,7 +84,9 @@ pub trait Output {
 	}
 
 	fn push_ty(&mut self, ty: &Ty) {
-		self.push("(");
+		if !matches!(ty, Ty::Tup(_)) {
+			self.push("(");
+		}
 
 		match ty {
 			Ty::Num(..) => self.push("number"),
@@ -110,6 +112,15 @@ pub trait Output {
 				self.push_ty(key);
 				self.push("]: true");
 				self.push(" }");
+			}
+
+			Ty::Tup(types) => {
+				for (i, ty) in types.iter().enumerate() {
+					self.push_ty(ty);
+					if i != types.len() - 1 {
+						self.push(", ");
+					}
+				}
 			}
 
 			Ty::Opt(ty) => {
@@ -194,7 +205,9 @@ pub trait Output {
 			Ty::CFrame => self.push("CFrame"),
 		}
 
-		self.push(")");
+		if !matches!(ty, Ty::Tup(_)) {
+			self.push(")");
+		}
 	}
 
 	fn push_file_header(&mut self, scope: &str) {

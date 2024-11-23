@@ -96,6 +96,10 @@ pub enum Report<'src> {
 		dup_span: Span,
 		name: &'src str,
 	},
+
+	AnalyzeInvalidTupleLocation {
+		span: Span,
+	},
 }
 
 impl<'src> Report<'src> {
@@ -122,6 +126,7 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => Severity::Error,
 			Self::AnalyzeMissingOptValue { .. } => Severity::Error,
 			Self::AnalyzeDuplicateDecl { .. } => Severity::Error,
+			Self::AnalyzeInvalidTupleLocation { .. } => Severity::Error,
 		}
 	}
 
@@ -151,6 +156,7 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => "unbounded recursive type".to_string(),
 			Self::AnalyzeMissingOptValue { .. } => "missing option expected".to_string(),
 			Self::AnalyzeDuplicateDecl { name, .. } => format!("duplicate declaration '{}'", name),
+			Self::AnalyzeInvalidTupleLocation { .. } => "invalid tuple location".to_string(),
 		}
 	}
 
@@ -177,6 +183,7 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => "3012",
 			Self::AnalyzeMissingOptValue { .. } => "3013",
 			Self::AnalyzeDuplicateDecl { .. } => "3014",
+			Self::AnalyzeInvalidTupleLocation { .. } => "3015",
 		}
 	}
 
@@ -272,6 +279,10 @@ impl<'src> Report<'src> {
 					Label::primary((), dup_span.clone()).with_message("duplicate declaration"),
 				]
 			}
+
+			Self::AnalyzeInvalidTupleLocation { span } => {
+				vec![Label::primary((), span.clone()).with_message("invalid tuple")]
+			}
 		}
 	}
 
@@ -322,7 +333,7 @@ impl<'src> Report<'src> {
 			Self::AnalyzeInvalidOptionalType { .. } => Some(vec![
 				"you cannot have 'double optional' types, where a type is optional twice".to_string(),
 				"maps cannot have optional keys or values, as those are impossible to represent in luau".to_string(),
-				"additionally the `unknown` type cannot be optional".to_string(),
+				"additionally tuples and the `unknown` type cannot be optional".to_string(),
 			]),
 			Self::AnalyzeUnboundedRecursiveType { .. } => Some(vec![
 				"this is an unbounded recursive type".to_string(),
@@ -335,6 +346,7 @@ impl<'src> Report<'src> {
 				"the {expected} option should not be empty if {required_when}"
 			)]),
 			Self::AnalyzeDuplicateDecl { .. } => None,
+			Self::AnalyzeInvalidTupleLocation { .. } => Some(vec![format!("tuples cannot be nested in other types")]),
 		}
 	}
 

@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, TyDecl, YieldType},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, Ty, TyDecl, YieldType},
 	irgen::{des, ser},
 };
 
@@ -174,6 +174,43 @@ impl<'src> ClientOutput<'src> {
 		));
 	}
 
+	fn push_values_args(&mut self, data: &Ty) {
+		let value = self.config.casing.with("Value", "value", "value");
+
+		if let Ty::Tup(types) = data {
+			for (i, ty) in types.iter().enumerate() {
+				self.push(&format!(
+					"{value}{}: ",
+					if i > 0 { (i + 1).to_string() } else { "".to_string() }
+				));
+				self.push_ty(ty);
+				if i != types.len() - 1 {
+					self.push(", ");
+				}
+			}
+		} else {
+			self.push(&format!("{value}: "));
+			self.push_ty(data);
+		}
+	}
+
+	fn get_values(&self, data: &Option<Ty>) -> String {
+		if let Some(Ty::Tup(types)) = data {
+			(1..=types.len())
+				.map(|i| {
+					if i == 1 {
+						"value".to_string()
+					} else {
+						format!("value{}", i)
+					}
+				})
+				.collect::<Vec<_>>()
+				.join(", ")
+		} else {
+			"value".to_string()
+		}
+	}
+
 	fn push_reliable_callback(&mut self, first: bool, ev: &EvDecl) {
 		let id = ev.id;
 
@@ -193,7 +230,13 @@ impl<'src> ClientOutput<'src> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		if let Some(Ty::Tup(_)) = &ev.data {
+			self.push_line(&format!("local {values}",));
+		} else {
+			self.push_line("local value");
+		}
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -213,10 +256,10 @@ impl<'src> ClientOutput<'src> {
 		}
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], value)")),
-			EvCall::ManySync => self.push_line("cb(value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, value)"),
+			EvCall::SingleSync => self.push_line(&format!("events[{id}]({values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], {values})")),
+			EvCall::ManySync => self.push_line(&format!("cb({values})")),
+			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, {values})")),
 		}
 
 		if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
@@ -228,8 +271,13 @@ impl<'src> ClientOutput<'src> {
 		self.push_line("else");
 		self.indent();
 
-		if ev.data.is_some() {
-			self.push_line(&format!("table.insert(event_queue[{id}], value)"));
+		if let Some(data) = &ev.data {
+			if matches!(data, Ty::Tup(_)) {
+				self.push_line(&format!("table.insert(event_queue[{id}], {{{values}}})"));
+			} else {
+				self.push_line(&format!("table.insert(event_queue[{id}], value)"));
+			}
+
 			self.push_line(&format!("if #event_queue[{id}] > 64 then"));
 		} else {
 			self.push_line(&format!("event_queue[{id}] += 1"));
@@ -280,7 +328,13 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line("local call_id = buffer.readu8(incoming_buff, read(1))");
 
-		self.push_line("local value");
+		let values = self.get_values(&fndecl.rets);
+
+		if let Some(Ty::Tup(_)) = &fndecl.rets {
+			self.push_line(&format!("local {values}",));
+		} else {
+			self.push_line("local value");
+		}
 
 		if let Some(data) = &fndecl.rets {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -288,10 +342,10 @@ impl<'src> ClientOutput<'src> {
 
 		match self.config.yield_type {
 			YieldType::Yield | YieldType::Future => {
-				self.push_line(&format!("task.spawn(event_queue[{id}][call_id], value)"));
+				self.push_line(&format!("task.spawn(event_queue[{id}][call_id], {values})"));
 			}
 			YieldType::Promise => {
-				self.push_line(&format!("event_queue[{id}][call_id](value)"));
+				self.push_line(&format!("event_queue[{id}][call_id]({values})"));
 			}
 		}
 
@@ -369,7 +423,13 @@ impl<'src> ClientOutput<'src> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		if let Some(Ty::Tup(_)) = &ev.data {
+			self.push_line(&format!("local {values}",));
+		} else {
+			self.push_line("local value");
+		}
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", self.config.write_checks));
@@ -389,10 +449,10 @@ impl<'src> ClientOutput<'src> {
 		}
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], value)")),
-			EvCall::ManySync => self.push_line("cb(value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, value)"),
+			EvCall::SingleSync => self.push_line(&format!("events[{id}]({values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], {values})")),
+			EvCall::ManySync => self.push_line(&format!("cb({values})")),
+			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, {values})")),
 		}
 
 		if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
@@ -404,8 +464,13 @@ impl<'src> ClientOutput<'src> {
 		self.push_line("else");
 		self.indent();
 
-		if ev.data.is_some() {
-			self.push_line(&format!("table.insert(event_queue[{id}], value)"));
+		if let Some(data) = &ev.data {
+			if matches!(data, Ty::Tup(_)) {
+				self.push_line(&format!("table.insert(event_queue[{id}], {{{values}}})"));
+			} else {
+				self.push_line(&format!("table.insert(event_queue[{id}], value)"));
+			}
+
 			self.push_line(&format!("if #event_queue[{id}] > 64 then"));
 		} else {
 			self.push_line(&format!("event_queue[{id}] += 1"));
@@ -523,8 +588,7 @@ impl<'src> ClientOutput<'src> {
 		self.push(&format!("{fire} = function("));
 
 		if let Some(data) = &ev.data {
-			self.push(&format!("{value}: "));
-			self.push_ty(data);
+			self.push_values_args(data);
 		}
 
 		self.push(")\n");
@@ -587,14 +651,20 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line(&format!("events[{id}] = {callback}"));
 
-		if ev.data.is_some() {
+		if let Some(data) = &ev.data {
 			self.push_line(&format!("for _, value in event_queue[{id}] do"));
 			self.indent();
 
-			if ev.call == EvCall::SingleSync {
-				self.push_line(&format!("{callback}(value)"))
+			let value = if let Ty::Tup(_) = data {
+				"unpack(value)".to_string()
 			} else {
-				self.push_line(&format!("task.spawn({callback}, value)"))
+				"value".to_string()
+			};
+
+			if ev.call == EvCall::SingleSync {
+				self.push_line(&format!("{callback}({value})"))
+			} else {
+				self.push_line(&format!("task.spawn({callback}, {value})"))
 			}
 
 			self.dedent();
@@ -647,14 +717,20 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line(&format!("table.insert(events[{id}], {callback})"));
 
-		if ev.data.is_some() {
+		if let Some(data) = &ev.data {
 			self.push_line(&format!("for _, value in event_queue[{id}] do"));
 			self.indent();
 
-			if ev.call == EvCall::ManySync {
-				self.push_line(&format!("{callback}(value)"))
+			let value = if let Ty::Tup(_) = data {
+				"unpack(value)".to_string()
 			} else {
-				self.push_line(&format!("task.spawn({callback}, value)"))
+				"value".to_string()
+			};
+
+			if ev.call == EvCall::ManySync {
+				self.push_line(&format!("{callback}({value})"))
+			} else {
+				self.push_line(&format!("task.spawn({callback}, {value})"))
 			}
 
 			self.dedent();
@@ -725,8 +801,7 @@ impl<'src> ClientOutput<'src> {
 			self.push(&format!("{call} = function("));
 
 			if let Some(ty) = &fndecl.args {
-				self.push(&format!("{value}: "));
-				self.push_ty(ty);
+				self.push_values_args(ty);
 			}
 
 			self.push(")");
@@ -735,12 +810,24 @@ impl<'src> ClientOutput<'src> {
 				match self.config.yield_type {
 					YieldType::Future => {
 						self.push(": Future.Future<");
-						self.push_ty(ty);
+						if matches!(ty, Ty::Tup(_)) {
+							self.push("(");
+							self.push_ty(ty);
+							self.push(")");
+						} else {
+							self.push_ty(ty);
+						}
 						self.push(">");
 					}
 					YieldType::Yield => {
 						self.push(": ");
-						self.push_ty(ty);
+						if matches!(ty, Ty::Tup(_)) {
+							self.push("(");
+							self.push_ty(ty);
+							self.push(")");
+						} else {
+							self.push_ty(ty);
+						}
 					}
 					_ => (),
 				}
@@ -774,10 +861,10 @@ impl<'src> ClientOutput<'src> {
 			match self.config.yield_type {
 				YieldType::Yield => {
 					self.push_line(&format!("event_queue[{id}][function_call_id] = coroutine.running()",));
-					self.push_line("local async_value = coroutine.yield()");
+					self.push_line("return coroutine.yield()");
 				}
 				YieldType::Future => {
-					self.push_line("local async_value = Future.new(function()");
+					self.push_line("return Future.new(function()");
 					self.indent();
 
 					self.push_line(&format!("event_queue[{id}][function_call_id] = coroutine.running()",));
@@ -787,7 +874,7 @@ impl<'src> ClientOutput<'src> {
 					self.push_line("end)");
 				}
 				YieldType::Promise => {
-					self.push_line("local async_value = Promise.new(function(resolve)");
+					self.push_line("return Promise.new(function(resolve)");
 					self.indent();
 
 					self.push_line(&format!("event_queue[{id}][function_call_id] = resolve"));
@@ -796,8 +883,6 @@ impl<'src> ClientOutput<'src> {
 					self.push_line("end)");
 				}
 			}
-
-			self.push_line("return async_value");
 
 			self.dedent();
 			self.push_line("end,");

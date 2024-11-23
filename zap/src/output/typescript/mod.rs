@@ -125,6 +125,8 @@ pub trait Output: ConfigProvider {
 				self.push(">");
 			}
 
+			Ty::Tup(key) => todo!(),
+
 			Ty::Opt(ty) => {
 				self.push_ty(ty);
 

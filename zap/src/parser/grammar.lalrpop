@@ -58,7 +58,7 @@ EvDecl: SyntaxEvDecl<'input> = {
     <start:@L> "event" <name:Identifier> "=" "{"
         "from" ":" <from:EvSource>
         "," "type" ":" <evty:EvTy>
-        "," "call" ":" <call:EvCall> 
+        "," "call" ":" <call:EvCall>
         <data:("," "data" ":" <Ty>)?>
         ","?
     "}" ";"? <end:@R> => SyntaxEvDecl { start, name, from, evty, call, data, end },
@@ -107,6 +107,7 @@ TyKind: SyntaxTyKind<'input> = {
     <ty:Ty> "[" <r:IntRange?> "]" => SyntaxTyKind::Arr(Box::new(ty), r),
     "map" "{" "[" <k:Ty> "]" ":" <v:Ty> "}" => SyntaxTyKind::Map(Box::new(k), Box::new(v)),
     "set" "{" <k:Ty> "}" => SyntaxTyKind::Set(Box::new(k)),
+    "(" <types:Comma<Ty>> ")" => SyntaxTyKind::Tup(types),
 
     <ty:Ty> "?" => SyntaxTyKind::Opt(Box::new(ty)),
     <name:Identifier> => SyntaxTyKind::Ref(name),
