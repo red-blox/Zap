@@ -163,7 +163,7 @@ impl<'src> ClientOutput<'src> {
 
 			if let Some(types) = &fndecl.rets {
 				if types.len() > 1 {
-					self.push("[");
+					self.push("LuaTuple<[");
 				}
 
 				for (i, ty) in types.iter().enumerate() {
@@ -175,7 +175,7 @@ impl<'src> ClientOutput<'src> {
 				}
 
 				if types.len() > 1 {
-					self.push("]");
+					self.push("]>");
 				}
 			} else {
 				self.push("void");
