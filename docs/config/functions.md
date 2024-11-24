@@ -7,6 +7,12 @@ const example = `funct Test = {
     },
     rets: enum { Success, Fail }
 }`
+
+const tupleExample = `funct Tuples = {
+    call: Async,
+    args: (boolean, u8),
+    rets: (boolean, string)
+}`
 </script>
 
 # Functions
@@ -41,6 +47,16 @@ Use synchronous functions with extreme caution.
 
 This field determines the data that is sent to the server. It can be any [Zap type](./types.md).
 
+- If the client doesn't send any data, the `args` field should be excluded.
+- You can pass multiple arguments to the function by using a tuple:
+
+<CodeBlock :code="tupleExample" />
+
 ### `rets`
 
 This field determines the data that is sent back to the client from the server. It can be any [Zap type](./types.md).
+
+- If the server doesn't return any data, the `rets` field should be excluded.
+- The function can return multiple values by using a tuple:
+
+<CodeBlock :code="tupleExample" />

@@ -13,9 +13,7 @@ event AnotherEvent = {
     from: Client,
     type: Reliable,
     call: SingleAsync,
-    data: struct {
-        baz: boolean,
-    },
+    data: (boolean, u8)
 }`
 </script>
 
@@ -50,7 +48,7 @@ If your event's [call field](../config/events.md#call) is `SingleAsync` or `Sing
 local Zap = require(Path.To.Zap)
 
 -- only server listeners are given the player argument
-Zap.AnotherEvent.SetCallback(function(Player, Data)
+Zap.AnotherEvent.SetCallback(function(Player, Bool, Number)
     -- Do something with the player and data
 end)
 ```
@@ -81,14 +79,12 @@ Use `Sync` events only when performance is critical.
 
 ## Firing From the Client
 
-The client only has a single function for firing events, `Fire`. This function takes the event's data as its only argument.
+The client only has a single function for firing events, `Fire`. This function takes the event's data as it arguments.
 
 ```lua
 local Zap = require(Path.To.Zap)
 
-Zap.AnotherEvent.Fire({
-    baz = true,
-})
+Zap.AnotherEvent.Fire(true, 32)
 ```
 
 ## Firing From the Server
@@ -116,7 +112,7 @@ Zap.MyEvent.Fire(Player, {
 
 ### FireAll
 
-The `FireAll` function takes the event's data as its only argument. It will fire the event to all players.
+The `FireAll` function takes the event's data as its arguments. It will fire the event to all players.
 
 ```lua
 local Zap = require(Path.To.Zap)
