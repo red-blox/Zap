@@ -806,9 +806,10 @@ impl<'a> ServerOutput<'a> {
 
 		let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
+		let player = self.config.casing.with("Player", "player", "player");
 
 		self.push_indent();
-		self.push(&format!("{set_callback} = function({callback}: (player: Player"));
+		self.push(&format!("{set_callback} = function({callback}: ({player}: Player"));
 
 		if let Some(types) = &ev.data {
 			self.push(", ");
@@ -837,9 +838,10 @@ impl<'a> ServerOutput<'a> {
 
 		let on = self.config.casing.with("On", "on", "on");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
+		let player = self.config.casing.with("Player", "player", "player");
 
 		self.push_indent();
-		self.push(&format!("{on} = function({callback}: (player: Player"));
+		self.push(&format!("{on} = function({callback}: ({player}: Player"));
 
 		if let Some(types) = &ev.data {
 			self.push(", ");
@@ -870,9 +872,10 @@ impl<'a> ServerOutput<'a> {
 
 		let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
+		let player = self.config.casing.with("Player", "player", "player");
 
 		self.push_indent();
-		self.push(&format!("{set_callback} = function({callback}: (player: Player"));
+		self.push(&format!("{set_callback} = function({callback}: ({player}: Player"));
 
 		if let Some(types) = &fndecl.args {
 			self.push(", ");
