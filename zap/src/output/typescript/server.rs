@@ -74,7 +74,8 @@ impl<'a> ServerOutput<'a> {
 
 		if let Some(data) = &ev.data {
 			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+			todo!()
+			// self.push_arg_ty(data);
 		}
 
 		self.push(") => void;\n");
@@ -89,7 +90,8 @@ impl<'a> ServerOutput<'a> {
 
 		if let Some(data) = &ev.data {
 			self.push(value);
-			self.push_arg_ty(data);
+			todo!()
+			// self.push_arg_ty(data);
 		}
 
 		self.push(") => void;\n");
@@ -105,7 +107,8 @@ impl<'a> ServerOutput<'a> {
 
 		if let Some(data) = &ev.data {
 			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+			todo!()
+			// self.push_arg_ty(data);
 		}
 
 		self.push(") => void;\n");
@@ -121,7 +124,8 @@ impl<'a> ServerOutput<'a> {
 
 		if let Some(data) = &ev.data {
 			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+			todo!()
+			// self.push_arg_ty(data);
 		}
 
 		self.push(") => void;\n");
@@ -137,7 +141,8 @@ impl<'a> ServerOutput<'a> {
 
 		if let Some(data) = &ev.data {
 			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+			todo!()
+			// self.push_arg_ty(data);
 		}
 
 		self.push(") => void\n");
@@ -195,7 +200,8 @@ impl<'a> ServerOutput<'a> {
 
 			if let Some(data) = &ev.data {
 				self.push(&format!(", {value}"));
-				self.push_arg_ty(data);
+				todo!()
+				// self.push_arg_ty(data);
 			}
 
 			self.push(") => void) => () => void;\n");
@@ -220,13 +226,15 @@ impl<'a> ServerOutput<'a> {
 
 			if let Some(data) = &fndecl.args {
 				self.push(&format!(", {value}"));
-				self.push_arg_ty(data);
+				todo!()
+				// self.push_arg_ty(data);
 			}
 
 			self.push(") => ");
 
 			if let Some(data) = &fndecl.rets {
-				self.push_ty(data);
+				todo!()
+			// self.push_ty(data);
 			} else {
 				self.push("void");
 			}

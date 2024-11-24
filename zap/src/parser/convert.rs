@@ -319,10 +319,26 @@ impl<'src> Converter<'src> {
 		let from = evdecl.from;
 		let evty = evdecl.evty;
 		let call = evdecl.call;
-		let data = evdecl.data.as_ref().map(|ty| self.ty(ty));
+		let data = evdecl
+			.data
+			.as_ref()
+			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
 
 		if data.is_some() && evty == EvType::Unreliable {
-			let (min, max) = data.as_ref().unwrap().size(tydecls, &mut HashSet::new());
+			let mut min = 0;
+			let mut max = Some(0);
+
+			for ty in data.as_ref().unwrap() {
+				let (ty_min, ty_max) = ty.size(tydecls, &mut HashSet::new());
+
+				min += ty_min;
+
+				if let (Some(ty_max), Some(max)) = (ty_max, max.as_mut()) {
+					*max += ty_max;
+				} else {
+					max = None;
+				}
+			}
 
 			if min > self.max_unreliable_size {
 				self.report(Report::AnalyzeOversizeUnreliable {
@@ -353,8 +369,14 @@ impl<'src> Converter<'src> {
 	fn fndecl(&mut self, fndecl: &SyntaxFnDecl<'src>, id: usize) -> FnDecl<'src> {
 		let name = fndecl.name.name;
 		let call = fndecl.call;
-		let args = fndecl.args.as_ref().map(|ty| self.ty(ty));
-		let rets = fndecl.rets.as_ref().map(|ty| self.ty(ty));
+		let args = fndecl
+			.args
+			.as_ref()
+			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
+		let rets = fndecl
+			.rets
+			.as_ref()
+			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
 
 		FnDecl {
 			name,

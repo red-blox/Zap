@@ -115,7 +115,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(ty, "value", true));
+		self.push_stmts(&des::gen(&[ty.clone()], "value", true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");

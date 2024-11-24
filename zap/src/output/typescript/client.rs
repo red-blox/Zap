@@ -83,7 +83,8 @@ impl<'src> ClientOutput<'src> {
 
 			if let Some(data) = &ev.data {
 				self.push(value);
-				self.push_arg_ty(data);
+				todo!()
+				// self.push_arg_ty(data);
 			}
 
 			self.push(") => void;\n");
@@ -118,7 +119,8 @@ impl<'src> ClientOutput<'src> {
 
 			if let Some(data) = &ev.data {
 				self.push(value);
-				self.push_arg_ty(data);
+				todo!()
+				// self.push_arg_ty(data);
 			}
 
 			self.push(") => void) => () => void;\n");
@@ -141,7 +143,8 @@ impl<'src> ClientOutput<'src> {
 
 			if let Some(data) = &fndecl.args {
 				self.push(value);
-				self.push_arg_ty(data);
+				todo!()
+				// self.push_arg_ty(data);
 			}
 
 			self.push(") => ");
@@ -151,7 +154,8 @@ impl<'src> ClientOutput<'src> {
 			}
 
 			if let Some(data) = &fndecl.rets {
-				self.push_ty(data);
+				todo!()
+			// self.push_ty(data);
 			} else {
 				self.push("void");
 			}

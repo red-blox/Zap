@@ -14,8 +14,20 @@ impl Gen for Ser {
 		self.buf.push(stmt);
 	}
 
-	fn gen(mut self, var: Var, ty: &Ty) -> Vec<Stmt> {
-		self.push_ty(ty, var);
+	fn gen(mut self, var: Var, types: &[Ty]) -> Vec<Stmt> {
+		for (i, ty) in types.iter().enumerate() {
+			let var = if i > 0 {
+				Var::Name(match &var {
+					Var::Name(name) => format!("{name}{}", i + 1),
+					_ => unreachable!(),
+				})
+			} else {
+				var.clone()
+			};
+
+			self.push_ty(ty, var);
+		}
+
 		self.buf
 	}
 
@@ -357,11 +369,11 @@ impl Ser {
 	}
 }
 
-pub fn gen(ty: &Ty, var: &str, checks: bool) -> Vec<Stmt> {
+pub fn gen(types: &[Ty], var: &str, checks: bool) -> Vec<Stmt> {
 	Ser {
 		checks,
 		buf: vec![],
 		var_occurrences: HashMap::new(),
 	}
-	.gen(var.into(), ty)
+	.gen(var.into(), types)
 }
