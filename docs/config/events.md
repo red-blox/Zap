@@ -65,6 +65,6 @@ Use synchronous events with extreme caution.
 This field determines the data that is sent with the event. It can be any [Zap type](./types.md).
 
 - If the event does not require any data, the `data` field should be excluded.
-- You can pass multiple arguments to the event by using a tuple:
+- You can pass multiple arguments to the event by separating each type with a comma and wrapping them all in parentheses:
 
 <CodeBlock :code="dataExample" />
