@@ -76,8 +76,8 @@ impl std::fmt::Display for YieldType {
 pub struct FnDecl<'src> {
 	pub name: &'src str,
 	pub call: FnCall,
-	pub args: Option<Ty<'src>>,
-	pub rets: Option<Ty<'src>>,
+	pub args: Option<Vec<Ty<'src>>>,
+	pub rets: Option<Vec<Ty<'src>>>,
 	pub id: usize,
 }
 
@@ -93,7 +93,7 @@ pub struct EvDecl<'src> {
 	pub from: EvSource,
 	pub evty: EvType,
 	pub call: EvCall,
-	pub data: Option<Ty<'src>>,
+	pub data: Option<Vec<Ty<'src>>>,
 	pub id: usize,
 }
 

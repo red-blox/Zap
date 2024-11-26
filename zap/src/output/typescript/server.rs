@@ -1,3 +1,4 @@
+use crate::config::Ty;
 use crate::config::{Config, EvCall, EvDecl, EvSource, TyDecl};
 
 use super::ConfigProvider;
@@ -67,14 +68,13 @@ impl<'a> ServerOutput<'a> {
 	fn push_return_fire(&mut self, ev: &EvDecl) {
 		let fire = self.config.casing.with("Fire", "fire", "fire");
 		let player = self.config.casing.with("Player", "player", "player");
-		let value = self.config.casing.with("Value", "value", "value");
 
 		self.push_indent();
 		self.push(&format!("{fire}: ({player}: Player"));
 
-		if let Some(data) = &ev.data {
-			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+		if let Some(types) = &ev.data {
+			self.push(", ");
+			self.push_parameters(types);
 		}
 
 		self.push(") => void;\n");
@@ -82,14 +82,12 @@ impl<'a> ServerOutput<'a> {
 
 	fn push_return_fire_all(&mut self, ev: &EvDecl) {
 		let fire_all = self.config.casing.with("FireAll", "fireAll", "fire_all");
-		let value = self.config.casing.with("Value", "value", "value");
 
 		self.push_indent();
 		self.push(&format!("{fire_all}: ("));
 
-		if let Some(data) = &ev.data {
-			self.push(value);
-			self.push_arg_ty(data);
+		if let Some(types) = &ev.data {
+			self.push_parameters(types);
 		}
 
 		self.push(") => void;\n");
@@ -98,14 +96,13 @@ impl<'a> ServerOutput<'a> {
 	fn push_return_fire_except(&mut self, ev: &EvDecl) {
 		let fire_except = self.config.casing.with("FireExcept", "fireExcept", "fire_except");
 		let except = self.config.casing.with("Except", "except", "except");
-		let value = self.config.casing.with("Value", "value", "value");
 
 		self.push_indent();
 		self.push(&format!("{fire_except}: ({except}: Player"));
 
-		if let Some(data) = &ev.data {
-			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+		if let Some(types) = &ev.data {
+			self.push(", ");
+			self.push_parameters(types);
 		}
 
 		self.push(") => void;\n");
@@ -114,14 +111,13 @@ impl<'a> ServerOutput<'a> {
 	fn push_return_fire_list(&mut self, ev: &EvDecl) {
 		let fire_list = self.config.casing.with("FireList", "fireList", "fire_list");
 		let list = self.config.casing.with("List", "list", "list");
-		let value = self.config.casing.with("Value", "value", "value");
 
 		self.push_indent();
 		self.push(&format!("{fire_list}: ({list}: Player[]"));
 
-		if let Some(data) = &ev.data {
-			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+		if let Some(types) = &ev.data {
+			self.push(", ");
+			self.push_parameters(types);
 		}
 
 		self.push(") => void;\n");
@@ -130,14 +126,13 @@ impl<'a> ServerOutput<'a> {
 	fn push_return_fire_set(&mut self, ev: &EvDecl) {
 		let fire_set = self.config.casing.with("FireSet", "fireSet", "fire_set");
 		let set = self.config.casing.with("Set", "set", "set");
-		let value = self.config.casing.with("Value", "value", "value");
 
 		self.push_indent();
 		self.push(&format!("{fire_set}: ({set}: Set<Player>"));
 
-		if let Some(data) = &ev.data {
-			self.push(&format!(", {value}"));
-			self.push_arg_ty(data);
+		if let Some(types) = &ev.data {
+			self.push(", ");
+			self.push_parameters(types);
 		}
 
 		self.push(") => void\n");
@@ -188,14 +183,13 @@ impl<'a> ServerOutput<'a> {
 			};
 			let callback = self.config.casing.with("Callback", "callback", "callback");
 			let player = self.config.casing.with("Player", "player", "player");
-			let value = self.config.casing.with("Value", "value", "value");
 
 			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ({player}: Player"));
 
-			if let Some(data) = &ev.data {
-				self.push(&format!(", {value}"));
-				self.push_arg_ty(data);
+			if let Some(types) = &ev.data {
+				self.push(", ");
+				self.push_parameters(types);
 			}
 
 			self.push(") => void) => () => void;\n");
@@ -213,20 +207,33 @@ impl<'a> ServerOutput<'a> {
 			let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
 			let callback = self.config.casing.with("Callback", "callback", "callback");
 			let player = self.config.casing.with("Player", "player", "player");
-			let value = self.config.casing.with("Value", "value", "value");
 
 			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ({player}: Player"));
 
-			if let Some(data) = &fndecl.args {
-				self.push(&format!(", {value}"));
-				self.push_arg_ty(data);
+			if let Some(types) = &fndecl.args {
+				self.push(", ");
+				self.push_parameters(types);
 			}
 
 			self.push(") => ");
 
-			if let Some(data) = &fndecl.rets {
-				self.push_ty(data);
+			if let Some(types) = &fndecl.rets {
+				if types.len() > 1 {
+					self.push("LuaTuple<[");
+				}
+
+				for (i, ty) in types.iter().enumerate() {
+					if i > 0 {
+						self.push(", ");
+					}
+
+					self.push_ty(ty);
+				}
+
+				if types.len() > 1 {
+					self.push("]>");
+				}
 			} else {
 				self.push("void");
 			}

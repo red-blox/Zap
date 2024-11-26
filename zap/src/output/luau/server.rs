@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, TyDecl},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Ty, TyDecl},
 	irgen::{des, ser},
 };
 
@@ -115,14 +115,14 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line(&format!("function types.write_{name}(value: {name})"));
 		self.indent();
-		self.push_stmts(&ser::gen(ty, "value", self.config.write_checks));
+		self.push_stmts(&ser::gen(&[ty.clone()], "value", self.config.write_checks));
 		self.dedent();
 		self.push_line("end");
 
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(ty, "value", true));
+		self.push_stmts(&des::gen(&[ty.clone()], "value", true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -186,6 +186,23 @@ impl<'a> ServerOutput<'a> {
 		));
 	}
 
+	fn get_values(&self, data: &Option<Vec<Ty>>) -> String {
+		if let Some(types) = data {
+			(1..=types.len())
+				.map(|i| {
+					if i == 1 {
+						"value".to_string()
+					} else {
+						format!("value{}", i)
+					}
+				})
+				.collect::<Vec<_>>()
+				.join(", ")
+		} else {
+			"value".to_string()
+		}
+	}
+
 	fn push_reliable_callback(&mut self, first: bool, ev: &EvDecl) {
 		let id = ev.id;
 
@@ -205,7 +222,9 @@ impl<'a> ServerOutput<'a> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -220,10 +239,10 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, value)")),
-			EvCall::ManySync => self.push_line("cb(player, value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, player, value)"),
+			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, {values})")),
+			EvCall::ManySync => self.push_line(&format!("cb(player, {values})")),
+			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, player, {values})")),
 		}
 
 		self.dedent();
@@ -249,7 +268,10 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		self.push_line("local call_id = buffer.readu8(buff, read(1))");
-		self.push_line("local value");
+
+		let values = self.get_values(&fndecl.args);
+
+		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fndecl.args {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -259,12 +281,36 @@ impl<'a> ServerOutput<'a> {
 
 		self.indent();
 
+		let rets = if let Some(types) = &fndecl.args {
+			(1..=types.len())
+				.map(|i| {
+					if i > 1 {
+						format!("rets{}", i)
+					} else {
+						"rets".to_string()
+					}
+				})
+				.collect::<Vec<_>>()
+				.join(", ")
+		} else {
+			"rets".to_string()
+		};
+
 		if fndecl.call == FnCall::Async {
+			let args = if let Some(types) = &fndecl.args {
+				(1..=types.len())
+					.map(|i| format!("value_{}", i))
+					.collect::<Vec<_>>()
+					.join(", ")
+			} else {
+				"value_1".to_string()
+			};
+
 			// Avoid using upvalues as an optimization.
-			self.push_line("task.spawn(function(player_2, call_id_2, value_2)");
+			self.push_line(&format!("task.spawn(function(player_2, call_id_2, {args})"));
 			self.indent();
 
-			self.push_line(&format!("local rets = events[{id}](player_2, value_2)"));
+			self.push_line(&format!("local {rets} = events[{id}](player_2, {args})"));
 
 			self.push_line("load_player(player_2)");
 			self.push_write_event_id(fndecl.id);
@@ -279,9 +325,9 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("player_map[player_2] = save()");
 
 			self.dedent();
-			self.push_line("end, player, call_id, value)");
+			self.push_line(&format!("end, player, call_id, {values})"));
 		} else {
-			self.push_line(&format!("local rets = events[{id}](player, value)"));
+			self.push_line(&format!("local {rets} = events[{id}](player, {values})"));
 
 			self.push_line("load_player(player)");
 			self.push_write_event_id(fndecl.id);
@@ -371,7 +417,9 @@ impl<'a> ServerOutput<'a> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		self.push_line(&format!("local {}", values));
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -386,10 +434,10 @@ impl<'a> ServerOutput<'a> {
 		self.indent();
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, value)")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, value)")),
-			EvCall::ManySync => self.push_line("cb(player, value)"),
-			EvCall::ManyAsync => self.push_line("task.spawn(cb, player, value)"),
+			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, {values})")),
+			EvCall::ManySync => self.push_line(&format!("cb(player, {values})")),
+			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, player, {values})")),
 		}
 
 		self.dedent();
@@ -447,8 +495,25 @@ impl<'a> ServerOutput<'a> {
 		));
 	}
 
+	fn push_value_parameters(&mut self, types: &[Ty]) {
+		for (i, ty) in types.iter().enumerate() {
+			let value = format!(
+				"{}{}",
+				self.config.casing.with("Value", "value", "value"),
+				if i == 0 { "".to_string() } else { (i + 1).to_string() }
+			);
+
+			if i > 0 {
+				self.push(", ");
+			}
+
+			self.push(&format!("{value}: "));
+			self.push_ty(ty);
+		}
+	}
+
 	fn push_return_fire(&mut self, ev: &EvDecl) {
-		let ty = &ev.data;
+		let types = &ev.data;
 
 		let fire = self.config.casing.with("Fire", "fire", "fire");
 		let player = self.config.casing.with("Player", "player", "player");
@@ -457,9 +522,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire} = function({player}: Player"));
 
-		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+		if let Some(types) = types {
+			self.push(", ");
+			self.push_value_parameters(types);
 		}
 
 		self.push(")\n");
@@ -472,8 +537,8 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = ty {
-			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
+		if let Some(types) = types {
+			self.push_stmts(&ser::gen(types, value, self.config.write_checks));
 		}
 
 		match ev.evty {
@@ -490,7 +555,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_all(&mut self, ev: &EvDecl) {
-		let ty = &ev.data;
+		let types = &ev.data;
 
 		let fire_all = self.config.casing.with("FireAll", "fireAll", "fire_all");
 		let value = self.config.casing.with("Value", "value", "value");
@@ -498,9 +563,8 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_all} = function("));
 
-		if let Some(ty) = ty {
-			self.push(&format!("{value}: "));
-			self.push_ty(ty);
+		if let Some(types) = types {
+			self.push_value_parameters(types);
 		}
 
 		self.push(")\n");
@@ -510,8 +574,8 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = ty {
-			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
+		if let Some(types) = types {
+			self.push_stmts(&ser::gen(types, value, self.config.write_checks));
 		}
 
 		match ev.evty {
@@ -540,7 +604,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_except(&mut self, ev: &EvDecl) {
-		let ty = &ev.data;
+		let types = &ev.data;
 
 		let fire_except = self.config.casing.with("FireExcept", "fireExcept", "fire_except");
 		let except = self.config.casing.with("Except", "except", "except");
@@ -549,9 +613,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_except} = function({except}: Player"));
 
-		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+		if let Some(types) = types {
+			self.push(", ");
+			self.push_value_parameters(types);
 		}
 
 		self.push(")\n");
@@ -561,8 +625,8 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = ty {
-			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
+		if let Some(types) = types {
+			self.push_stmts(&ser::gen(types, value, self.config.write_checks));
 		}
 
 		match ev.evty {
@@ -603,7 +667,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_list(&mut self, ev: &EvDecl) {
-		let ty = &ev.data;
+		let types = &ev.data;
 
 		let fire_list = self.config.casing.with("FireList", "fireList", "fire_list");
 		let list = self.config.casing.with("List", "list", "list");
@@ -612,9 +676,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_list} = function({list}: {{ Player }}"));
 
-		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+		if let Some(types) = types {
+			self.push(", ");
+			self.push_value_parameters(types);
 		}
 
 		self.push(")\n");
@@ -624,7 +688,7 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = ty {
+		if let Some(ty) = types {
 			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
 		}
 
@@ -658,7 +722,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_set(&mut self, ev: &EvDecl) {
-		let ty = &ev.data;
+		let types = &ev.data;
 
 		let fire_set = self.config.casing.with("FireSet", "fireSet", "fire_set");
 		let set = self.config.casing.with("Set", "set", "set");
@@ -667,9 +731,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_set} = function({set}: {{ [Player]: true }}"));
 
-		if let Some(ty) = ty {
-			self.push(&format!(", {value}: "));
-			self.push_ty(ty);
+		if let Some(types) = types {
+			self.push(", ");
+			self.push_value_parameters(types);
 		}
 
 		self.push(")\n");
@@ -679,7 +743,7 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = ty {
+		if let Some(ty) = types {
 			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
 		}
 
@@ -742,13 +806,14 @@ impl<'a> ServerOutput<'a> {
 
 		let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
+		let player = self.config.casing.with("Player", "player", "player");
 
 		self.push_indent();
-		self.push(&format!("{set_callback} = function({callback}: (Player"));
+		self.push(&format!("{set_callback} = function({callback}: ({player}: Player"));
 
-		if let Some(ty) = &ev.data {
+		if let Some(types) = &ev.data {
 			self.push(", ");
-			self.push_ty(ty);
+			self.push_value_parameters(types);
 		}
 
 		self.push(") -> ()): () -> ()\n");
@@ -773,13 +838,14 @@ impl<'a> ServerOutput<'a> {
 
 		let on = self.config.casing.with("On", "on", "on");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
+		let player = self.config.casing.with("Player", "player", "player");
 
 		self.push_indent();
-		self.push(&format!("{on} = function({callback}: (Player"));
+		self.push(&format!("{on} = function({callback}: ({player}: Player"));
 
-		if let Some(ty) = &ev.data {
+		if let Some(types) = &ev.data {
 			self.push(", ");
-			self.push_ty(ty);
+			self.push_value_parameters(types);
 		}
 
 		self.push(") -> ()): () -> ()\n");
@@ -806,19 +872,25 @@ impl<'a> ServerOutput<'a> {
 
 		let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
+		let player = self.config.casing.with("Player", "player", "player");
 
 		self.push_indent();
-		self.push(&format!("{set_callback} = function({callback}: (Player"));
+		self.push(&format!("{set_callback} = function({callback}: ({player}: Player"));
 
-		if let Some(ty) = &fndecl.args {
+		if let Some(types) = &fndecl.args {
 			self.push(", ");
-			self.push_ty(ty);
+			self.push_value_parameters(types);
 		}
 
 		self.push(") -> (");
 
-		if let Some(ty) = &fndecl.rets {
-			self.push_ty(ty);
+		if let Some(types) = &fndecl.rets {
+			for (i, ty) in types.iter().enumerate() {
+				if i > 0 {
+					self.push(", ");
+				}
+				self.push_ty(ty);
+			}
 		}
 
 		self.push(")): () -> ()\n");

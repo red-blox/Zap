@@ -1,3 +1,4 @@
+use crate::config::Ty;
 use crate::config::{Config, EvCall, EvSource, TyDecl, YieldType};
 
 use super::ConfigProvider;
@@ -73,7 +74,6 @@ impl<'src> ClientOutput<'src> {
 			.filter(|(_, ev_decl)| ev_decl.from == EvSource::Client)
 		{
 			let fire = self.config.casing.with("Fire", "fire", "fire");
-			let value = self.config.casing.with("Value", "value", "value");
 
 			self.push_line(&format!("export declare const {name}: {{", name = ev.name));
 			self.indent();
@@ -81,9 +81,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{fire}: ("));
 
-			if let Some(data) = &ev.data {
-				self.push(value);
-				self.push_arg_ty(data);
+			if let Some(types) = &ev.data {
+				self.push_parameters(types);
 			}
 
 			self.push(") => void;\n");
@@ -108,7 +107,6 @@ impl<'src> ClientOutput<'src> {
 				EvCall::ManySync | EvCall::ManyAsync => self.config.casing.with("On", "on", "on"),
 			};
 			let callback = self.config.casing.with("Callback", "callback", "callback");
-			let value = self.config.casing.with("Value", "value", "value");
 
 			self.push_line(&format!("export declare const {name}: {{", name = ev.name));
 			self.indent();
@@ -116,9 +114,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ("));
 
-			if let Some(data) = &ev.data {
-				self.push(value);
-				self.push_arg_ty(data);
+			if let Some(types) = &ev.data {
+				self.push_parameters(types);
 			}
 
 			self.push(") => void) => () => void;\n");
@@ -130,7 +127,6 @@ impl<'src> ClientOutput<'src> {
 
 	fn push_return_functions(&mut self) {
 		let call = self.config.casing.with("Call", "call", "call");
-		let value = self.config.casing.with("Value", "value", "value");
 
 		for fndecl in self.config.fndecls.iter() {
 			self.push_line(&format!("export declare const {}: {{", fndecl.name));
@@ -139,9 +135,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{call}: ("));
 
-			if let Some(data) = &fndecl.args {
-				self.push(value);
-				self.push_arg_ty(data);
+			if let Some(types) = &fndecl.args {
+				self.push_parameters(types);
 			}
 
 			self.push(") => ");
@@ -150,8 +145,22 @@ impl<'src> ClientOutput<'src> {
 				self.push("Promise<")
 			}
 
-			if let Some(data) = &fndecl.rets {
-				self.push_ty(data);
+			if let Some(types) = &fndecl.rets {
+				if types.len() > 1 {
+					self.push("LuaTuple<[");
+				}
+
+				for (i, ty) in types.iter().enumerate() {
+					if i > 0 {
+						self.push(", ");
+					}
+
+					self.push_ty(ty);
+				}
+
+				if types.len() > 1 {
+					self.push("]>");
+				}
 			} else {
 				self.push("void");
 			}

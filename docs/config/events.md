@@ -8,6 +8,13 @@ const example = `event MyEvent = {
 		bar: u8,
 	},
 }`
+
+const dataExample = `event MyEvent = {
+	from: Server,
+	type: Reliable,
+	call: ManyAsync,
+	data: (boolean, u32, string)
+}`
 </script>
 
 # Events
@@ -56,3 +63,8 @@ Use synchronous events with extreme caution.
 ### `data`
 
 This field determines the data that is sent with the event. It can be any [Zap type](./types.md).
+
+- If the event does not require any data, the `data` field should be excluded.
+- You can pass multiple arguments to the event by separating each type with a comma and wrapping them all in parentheses:
+
+<CodeBlock :code="dataExample" />

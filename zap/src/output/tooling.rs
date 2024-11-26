@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvDecl, FnDecl, TyDecl},
+	config::{Config, EvDecl, FnDecl, Ty, TyDecl},
 	irgen::{des, Stmt},
 	Output,
 };
@@ -115,7 +115,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(ty, "value", true));
+		self.push_stmts(&des::gen(&[ty.clone()], "value", true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -129,6 +129,22 @@ impl<'src> ToolingOutput<'src> {
 		}
 	}
 
+	fn get_values(&self, data: &Option<Vec<Ty>>) -> String {
+		if let Some(types) = data {
+			(1..=types.len())
+				.map(|i| {
+					if i == 1 {
+						"value".to_string()
+					} else {
+						format!("value{}", i)
+					}
+				})
+				.collect::<Vec<_>>()
+				.join(", ")
+		} else {
+			"value".to_string()
+		}
+	}
 	fn push_event_callback(&mut self, first: bool, ev: &EvDecl) {
 		let id = ev.id;
 
@@ -148,7 +164,9 @@ impl<'src> ToolingOutput<'src> {
 
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&ev.data);
+
+		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &ev.data {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -169,7 +187,7 @@ impl<'src> ToolingOutput<'src> {
 			));
 		}
 
-		self.push("value }");
+		self.push(&format!("{values} }}"));
 		self.push("\n");
 
 		self.dedent();
@@ -204,7 +222,9 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line("if isServer then");
 		self.indent();
 
-		self.push_line("local value");
+		let values = self.get_values(&fn_decl.args);
+
+		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fn_decl.args {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -222,7 +242,7 @@ impl<'src> ToolingOutput<'src> {
 			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
 		}
 
-		self.push("value }");
+		self.push(&format!("{values} }}"));
 		self.push("\n");
 
 		self.dedent();
@@ -232,7 +252,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line("else");
 		self.indent();
 
-		self.push_line("local value");
+		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fn_decl.rets {
 			self.push_stmts(&des::gen(data, "value", true));
@@ -250,7 +270,7 @@ impl<'src> ToolingOutput<'src> {
 			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
 		}
 
-		self.push("value }");
+		self.push(&format!("{values} }}"));
 		self.push("\n");
 
 		self.dedent();
