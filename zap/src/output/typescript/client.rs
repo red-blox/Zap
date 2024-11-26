@@ -65,22 +65,6 @@ impl<'src> ClientOutput<'src> {
 		}
 	}
 
-	fn push_parameters(&mut self, types: &[Ty]) {
-		let value = self.config.casing.with("Value", "value", "value");
-
-		for (i, ty) in types.iter().enumerate() {
-			if i > 0 {
-				self.push(", ");
-			}
-
-			self.push(&format!(
-				"{value}{}",
-				if i > 0 { (i + 1).to_string() } else { "".to_string() },
-			));
-			self.push_arg_ty(ty);
-		}
-	}
-
 	fn push_return_outgoing(&mut self) {
 		for (_i, ev) in self
 			.config
