@@ -1,4 +1,3 @@
-use crate::config::Ty;
 use crate::config::{Config, EvCall, EvSource, TyDecl, YieldType};
 
 use super::ConfigProvider;
@@ -81,8 +80,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{fire}: ("));
 
-			if let Some(types) = &ev.data {
-				self.push_parameters(types);
+			if !ev.data.is_empty() {
+				self.push_parameters(&ev.data);
 			}
 
 			self.push(") => void;\n");
@@ -114,8 +113,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ("));
 
-			if let Some(types) = &ev.data {
-				self.push_parameters(types);
+			if !ev.data.is_empty() {
+				self.push_parameters(&ev.data);
 			}
 
 			self.push(") => void) => () => void;\n");
@@ -135,8 +134,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{call}: ("));
 
-			if let Some(types) = &fndecl.args {
-				self.push_parameters(types);
+			if !fndecl.args.is_empty() {
+				self.push_parameters(&fndecl.args);
 			}
 
 			self.push(") => ");

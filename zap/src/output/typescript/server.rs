@@ -1,4 +1,3 @@
-use crate::config::Ty;
 use crate::config::{Config, EvCall, EvDecl, EvSource, TyDecl};
 
 use super::ConfigProvider;
@@ -72,9 +71,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire}: ({player}: Player"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push(", ");
-			self.push_parameters(types);
+			self.push_parameters(&ev.data);
 		}
 
 		self.push(") => void;\n");
@@ -86,8 +85,8 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_all}: ("));
 
-		if let Some(types) = &ev.data {
-			self.push_parameters(types);
+		if !ev.data.is_empty() {
+			self.push_parameters(&ev.data);
 		}
 
 		self.push(") => void;\n");
@@ -100,9 +99,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_except}: ({except}: Player"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push(", ");
-			self.push_parameters(types);
+			self.push_parameters(&ev.data);
 		}
 
 		self.push(") => void;\n");
@@ -115,9 +114,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_list}: ({list}: Player[]"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push(", ");
-			self.push_parameters(types);
+			self.push_parameters(&ev.data);
 		}
 
 		self.push(") => void;\n");
@@ -130,9 +129,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_set}: ({set}: Set<Player>"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push(", ");
-			self.push_parameters(types);
+			self.push_parameters(&ev.data);
 		}
 
 		self.push(") => void\n");
@@ -187,9 +186,9 @@ impl<'a> ServerOutput<'a> {
 			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ({player}: Player"));
 
-			if let Some(types) = &ev.data {
+			if !ev.data.is_empty() {
 				self.push(", ");
-				self.push_parameters(types);
+				self.push_parameters(&ev.data);
 			}
 
 			self.push(") => void) => () => void;\n");
@@ -211,9 +210,9 @@ impl<'a> ServerOutput<'a> {
 			self.push_indent();
 			self.push(&format!("{set_callback}: ({callback}: ({player}: Player"));
 
-			if let Some(types) = &fndecl.args {
+			if !fndecl.args.is_empty() {
 				self.push(", ");
-				self.push_parameters(types);
+				self.push_parameters(&fndecl.args);
 			}
 
 			self.push(") => ");

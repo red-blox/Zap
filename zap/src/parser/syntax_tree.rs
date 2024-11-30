@@ -78,7 +78,7 @@ pub struct SyntaxFnDecl<'src> {
 	pub start: usize,
 	pub name: SyntaxIdentifier<'src>,
 	pub call: FnCall,
-	pub args: Option<Vec<SyntaxTy<'src>>>,
+	pub args: Option<SyntaxParameters<'src>>,
 	pub rets: Option<Vec<SyntaxTy<'src>>>,
 	pub end: usize,
 }
@@ -96,11 +96,24 @@ pub struct SyntaxEvDecl<'src> {
 	pub from: EvSource,
 	pub evty: EvType,
 	pub call: EvCall,
-	pub data: Option<Vec<SyntaxTy<'src>>>,
+	pub data: Option<SyntaxParameters<'src>>,
 	pub end: usize,
 }
 
 impl<'src> Spanned for SyntaxEvDecl<'src> {
+	fn span(&self) -> Span {
+		self.start..self.end
+	}
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SyntaxParameters<'src> {
+	pub start: usize,
+	pub parameters: Vec<(Option<SyntaxIdentifier<'src>>, SyntaxTy<'src>)>,
+	pub end: usize,
+}
+
+impl<'src> Spanned for SyntaxParameters<'src> {
 	fn span(&self) -> Span {
 		self.start..self.end
 	}

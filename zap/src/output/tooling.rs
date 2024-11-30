@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvDecl, FnDecl, Ty, TyDecl},
+	config::{Config, EvDecl, FnDecl, Parameter, TyDecl},
 	irgen::{des, Stmt},
 	Output,
 };
@@ -115,7 +115,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(&[ty.clone()], "value", true));
+		self.push_stmts(&des::gen(std::iter::once(ty), "value", true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -129,9 +129,9 @@ impl<'src> ToolingOutput<'src> {
 		}
 	}
 
-	fn get_values(&self, data: &Option<Vec<Ty>>) -> String {
-		if let Some(types) = data {
-			(1..=types.len())
+	fn get_values(&self, data: &[Parameter]) -> String {
+		if !data.is_empty() {
+			(1..=data.len())
 				.map(|i| {
 					if i == 1 {
 						"value".to_string()
@@ -168,8 +168,8 @@ impl<'src> ToolingOutput<'src> {
 
 		self.push_line(&format!("local {values}"));
 
-		if let Some(data) = &ev.data {
-			self.push_stmts(&des::gen(data, "value", true));
+		if !ev.data.is_empty() {
+			self.push_stmts(&des::gen(ev.data.iter().map(|parameter| &parameter.ty), "value", true));
 		}
 
 		self.push_line("table.insert(events, {");
@@ -226,8 +226,12 @@ impl<'src> ToolingOutput<'src> {
 
 		self.push_line(&format!("local {values}"));
 
-		if let Some(data) = &fn_decl.args {
-			self.push_stmts(&des::gen(data, "value", true));
+		if !fn_decl.args.is_empty() {
+			self.push_stmts(&des::gen(
+				fn_decl.args.iter().map(|parameter| &parameter.ty),
+				"value",
+				true,
+			));
 		}
 
 		self.push_line("table.insert(events, {");
