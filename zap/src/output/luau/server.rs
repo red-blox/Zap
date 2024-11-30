@@ -1,7 +1,7 @@
 use crate::{
 	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Parameter, TyDecl},
 	irgen::{des, ser},
-	output::{get_named_values, get_unamed_values},
+	output::{get_named_values, get_unnamed_values},
 };
 
 use super::Output;
@@ -234,7 +234,7 @@ impl<'a> ServerOutput<'a> {
 		if !ev.data.is_empty() {
 			self.push_stmts(&des::gen(
 				ev.data.iter().map(|parameter| &parameter.ty),
-				&get_unamed_values("value", ev.data.len()),
+				&get_unnamed_values("value", ev.data.len()),
 				true,
 			));
 		}
@@ -285,7 +285,7 @@ impl<'a> ServerOutput<'a> {
 		if !fndecl.args.is_empty() {
 			self.push_stmts(&des::gen(
 				fndecl.args.iter().map(|parameter| &parameter.ty),
-				&get_unamed_values("value", fndecl.args.len()),
+				&get_unnamed_values("value", fndecl.args.len()),
 				true,
 			));
 		}
@@ -334,7 +334,7 @@ impl<'a> ServerOutput<'a> {
 			if let Some(types) = &fndecl.rets {
 				self.push_stmts(&ser::gen(
 					types,
-					&get_unamed_values("rets", types.len()),
+					&get_unnamed_values("rets", types.len()),
 					self.config.write_checks,
 				));
 			}
@@ -355,7 +355,7 @@ impl<'a> ServerOutput<'a> {
 			if let Some(types) = &fndecl.rets {
 				self.push_stmts(&ser::gen(
 					types,
-					&get_unamed_values("rets", types.len()),
+					&get_unnamed_values("rets", types.len()),
 					self.config.write_checks,
 				));
 			}
@@ -445,7 +445,7 @@ impl<'a> ServerOutput<'a> {
 		if !ev.data.is_empty() {
 			self.push_stmts(&des::gen(
 				ev.data.iter().map(|parameter| &parameter.ty),
-				&get_unamed_values("value", ev.data.len()),
+				&get_unnamed_values("value", ev.data.len()),
 				true,
 			));
 		}

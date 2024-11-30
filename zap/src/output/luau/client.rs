@@ -1,7 +1,7 @@
 use crate::{
 	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, Parameter, TyDecl, YieldType},
 	irgen::{des, ser},
-	output::{get_named_values, get_unamed_values},
+	output::{get_named_values, get_unnamed_values},
 };
 
 use super::Output;
@@ -222,7 +222,7 @@ impl<'src> ClientOutput<'src> {
 		if !ev.data.is_empty() {
 			self.push_stmts(&des::gen(
 				ev.data.iter().map(|parameter| &parameter.ty),
-				&get_unamed_values("value", ev.data.len()),
+				&get_unnamed_values("value", ev.data.len()),
 				true,
 			));
 		}
@@ -318,7 +318,7 @@ impl<'src> ClientOutput<'src> {
 		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fndecl.rets {
-			self.push_stmts(&des::gen(data, &get_unamed_values("value", data.len()), true));
+			self.push_stmts(&des::gen(data, &get_unnamed_values("value", data.len()), true));
 		}
 
 		match self.config.yield_type {
@@ -411,7 +411,7 @@ impl<'src> ClientOutput<'src> {
 		if !ev.data.is_empty() {
 			self.push_stmts(&des::gen(
 				ev.data.iter().map(|parameter| &parameter.ty),
-				&get_unamed_values("value", ev.data.len()),
+				&get_unnamed_values("value", ev.data.len()),
 				self.config.write_checks,
 			));
 		}

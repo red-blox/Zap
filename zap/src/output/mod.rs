@@ -4,7 +4,7 @@ pub mod luau;
 pub mod tooling;
 pub mod typescript;
 
-pub fn get_unamed_values(prefix: &str, count: usize) -> Vec<String> {
+pub fn get_unnamed_values(prefix: &str, count: usize) -> Vec<String> {
 	(0..count)
 		.map(|i| {
 			if i > 0 {
