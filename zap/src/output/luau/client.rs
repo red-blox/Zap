@@ -1,6 +1,7 @@
 use crate::{
 	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, Parameter, TyDecl, YieldType},
 	irgen::{des, ser},
+	output::{get_named_values, get_unamed_values},
 };
 
 use super::Output;
@@ -103,14 +104,18 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line(&format!("function types.write_{name}(value: {name})"));
 		self.indent();
-		self.push_stmts(&ser::gen(&[ty.clone()], "value", self.config.write_checks));
+		self.push_stmts(&ser::gen(
+			&[ty.clone()],
+			&["value".to_string()],
+			self.config.write_checks,
+		));
 		self.dedent();
 		self.push_line("end");
 
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(&[ty.clone()], "value", false));
+		self.push_stmts(&des::gen(&[ty.clone()], &["value".to_string()], false));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -215,7 +220,11 @@ impl<'src> ClientOutput<'src> {
 		self.push_line(&format!("local {values}"));
 
 		if !ev.data.is_empty() {
-			self.push_stmts(&des::gen(ev.data.iter().map(|parameter| &parameter.ty), "value", true));
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -309,7 +318,7 @@ impl<'src> ClientOutput<'src> {
 		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fndecl.rets {
-			self.push_stmts(&des::gen(data, "value", true));
+			self.push_stmts(&des::gen(data, &get_unamed_values("value", data.len()), true));
 		}
 
 		match self.config.yield_type {
@@ -402,7 +411,7 @@ impl<'src> ClientOutput<'src> {
 		if !ev.data.is_empty() {
 			self.push_stmts(&des::gen(
 				ev.data.iter().map(|parameter| &parameter.ty),
-				"value",
+				&get_unamed_values("value", ev.data.len()),
 				self.config.write_checks,
 			));
 		}
@@ -554,17 +563,22 @@ impl<'src> ClientOutput<'src> {
 
 	fn push_value_parameters(&mut self, parameters: &[Parameter]) {
 		for (i, parameter) in parameters.iter().enumerate() {
-			let value = format!(
-				"{}{}",
-				self.config.casing.with("Value", "value", "value"),
-				if i == 0 { "".to_string() } else { (i + 1).to_string() }
-			);
-
 			if i > 0 {
 				self.push(", ");
 			}
 
-			self.push(&format!("{value}: "));
+			if let Some(name) = parameter.name {
+				self.push(&format!("{name}: "));
+			} else {
+				let value = format!(
+					"{}{}",
+					self.config.casing.with("Value", "value", "value"),
+					if i == 0 { "".to_string() } else { (i + 1).to_string() }
+				);
+
+				self.push(&format!("{value}: "));
+			}
+
 			self.push_ty(&parameter.ty);
 		}
 	}
@@ -593,7 +607,7 @@ impl<'src> ClientOutput<'src> {
 		if !ev.data.is_empty() {
 			self.push_stmts(&ser::gen(
 				ev.data.iter().map(|parameter| &parameter.ty),
-				value,
+				&get_named_values(value, &ev.data),
 				self.config.write_checks,
 			));
 		}
@@ -859,7 +873,7 @@ impl<'src> ClientOutput<'src> {
 			if !fndecl.args.is_empty() {
 				self.push_stmts(&ser::gen(
 					fndecl.args.iter().map(|parameter| &parameter.ty),
-					value,
+					&get_named_values(value, &fndecl.args),
 					self.config.write_checks,
 				));
 			}

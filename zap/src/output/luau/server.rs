@@ -1,6 +1,7 @@
 use crate::{
 	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Parameter, TyDecl},
 	irgen::{des, ser},
+	output::{get_named_values, get_unamed_values},
 };
 
 use super::Output;
@@ -115,14 +116,18 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line(&format!("function types.write_{name}(value: {name})"));
 		self.indent();
-		self.push_stmts(&ser::gen(&[ty.clone()], "value", self.config.write_checks));
+		self.push_stmts(&ser::gen(
+			&[ty.clone()],
+			&["value".to_string()],
+			self.config.write_checks,
+		));
 		self.dedent();
 		self.push_line("end");
 
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(&[ty.clone()], "value", true));
+		self.push_stmts(&des::gen(&[ty.clone()], &["value".to_string()], true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -227,7 +232,11 @@ impl<'a> ServerOutput<'a> {
 		self.push_line(&format!("local {values}"));
 
 		if !ev.data.is_empty() {
-			self.push_stmts(&des::gen(ev.data.iter().map(|parameter| &parameter.ty), "value", true));
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -276,7 +285,7 @@ impl<'a> ServerOutput<'a> {
 		if !fndecl.args.is_empty() {
 			self.push_stmts(&des::gen(
 				fndecl.args.iter().map(|parameter| &parameter.ty),
-				"value",
+				&get_unamed_values("value", fndecl.args.len()),
 				true,
 			));
 		}
@@ -322,8 +331,12 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id_2)");
 
-			if let Some(ty) = &fndecl.rets {
-				self.push_stmts(&ser::gen(ty, "rets", self.config.write_checks));
+			if let Some(types) = &fndecl.rets {
+				self.push_stmts(&ser::gen(
+					types,
+					&get_unamed_values("rets", types.len()),
+					self.config.write_checks,
+				));
 			}
 
 			self.push_line("player_map[player_2] = save()");
@@ -339,8 +352,12 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id)");
 
-			if let Some(ty) = &fndecl.rets {
-				self.push_stmts(&ser::gen(ty, "rets", self.config.write_checks));
+			if let Some(types) = &fndecl.rets {
+				self.push_stmts(&ser::gen(
+					types,
+					&get_unamed_values("rets", types.len()),
+					self.config.write_checks,
+				));
 			}
 
 			self.push_line("player_map[player] = save()");
@@ -426,7 +443,11 @@ impl<'a> ServerOutput<'a> {
 		self.push_line(&format!("local {}", values));
 
 		if !ev.data.is_empty() {
-			self.push_stmts(&des::gen(ev.data.iter().map(|parameter| &parameter.ty), "value", true));
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -501,17 +522,22 @@ impl<'a> ServerOutput<'a> {
 
 	fn push_value_parameters(&mut self, parameters: &[Parameter]) {
 		for (i, parameter) in parameters.iter().enumerate() {
-			let value = format!(
-				"{}{}",
-				self.config.casing.with("Value", "value", "value"),
-				if i == 0 { "".to_string() } else { (i + 1).to_string() }
-			);
-
 			if i > 0 {
 				self.push(", ");
 			}
 
-			self.push(&format!("{value}: "));
+			if let Some(name) = parameter.name {
+				self.push(&format!("{name}: "));
+			} else {
+				let value = format!(
+					"{}{}",
+					self.config.casing.with("Value", "value", "value"),
+					if i == 0 { "".to_string() } else { (i + 1).to_string() }
+				);
+
+				self.push(&format!("{value}: "));
+			}
+
 			self.push_ty(&parameter.ty);
 		}
 	}
@@ -544,7 +570,7 @@ impl<'a> ServerOutput<'a> {
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
 				parameters.iter().map(|parameter| &parameter.ty),
-				value,
+				&get_named_values(value, parameters),
 				self.config.write_checks,
 			));
 		}
@@ -585,7 +611,7 @@ impl<'a> ServerOutput<'a> {
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
 				parameters.iter().map(|parameter| &parameter.ty),
-				value,
+				&get_named_values(value, parameters),
 				self.config.write_checks,
 			));
 		}
@@ -640,7 +666,7 @@ impl<'a> ServerOutput<'a> {
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
 				parameters.iter().map(|paramater| &paramater.ty),
-				value,
+				&get_named_values(value, parameters),
 				self.config.write_checks,
 			));
 		}
@@ -707,7 +733,7 @@ impl<'a> ServerOutput<'a> {
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
 				parameters.iter().map(|parameter| &parameter.ty),
-				value,
+				&get_named_values(value, parameters),
 				self.config.write_checks,
 			));
 		}
@@ -766,7 +792,7 @@ impl<'a> ServerOutput<'a> {
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
 				parameters.iter().map(|parameter| &parameter.ty),
-				value,
+				&get_named_values(value, parameters),
 				self.config.write_checks,
 			));
 		}

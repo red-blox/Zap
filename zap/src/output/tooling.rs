@@ -1,6 +1,7 @@
 use crate::{
 	config::{Config, EvDecl, FnDecl, Parameter, TyDecl},
 	irgen::{des, Stmt},
+	output::get_unamed_values,
 	Output,
 };
 
@@ -115,7 +116,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(std::iter::once(ty), "value", true));
+		self.push_stmts(&des::gen(std::iter::once(ty), &get_unamed_values("value", 1), true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -169,7 +170,11 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line(&format!("local {values}"));
 
 		if !ev.data.is_empty() {
-			self.push_stmts(&des::gen(ev.data.iter().map(|parameter| &parameter.ty), "value", true));
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		self.push_line("table.insert(events, {");
@@ -229,7 +234,7 @@ impl<'src> ToolingOutput<'src> {
 		if !fn_decl.args.is_empty() {
 			self.push_stmts(&des::gen(
 				fn_decl.args.iter().map(|parameter| &parameter.ty),
-				"value",
+				&get_unamed_values("value", fn_decl.args.len()),
 				true,
 			));
 		}
@@ -259,7 +264,7 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fn_decl.rets {
-			self.push_stmts(&des::gen(data, "value", true));
+			self.push_stmts(&des::gen(data, &get_unamed_values("value", data.len()), true));
 		}
 
 		self.push_line("table.insert(events, {");
