@@ -1,17 +1,27 @@
 <script setup lang="ts">
 const example = `funct Test = {
     call: Async,
-    args: struct {
-        foo: u8,
-        bar: string
-    },
+    args: (Foo: u8, Bar: string),
     rets: enum { Success, Fail }
 }`
 
-const multiArgsRetsExample = `funct MultipleArgsRets = {
+const argsExample = `funct OneUnnamedParameter = {
     call: Async,
-    args: (boolean, u8),
-    rets: (boolean, string)
+    args: u8,
+    rets: enum { Success, Fail }
+}
+
+funct TwoUnnamedParameters = {
+    call: Async,
+    args: (u8, string),
+    rets: enum { Success, Fail }
+}
+`
+
+const multipleRets = `funct MultipleRets = {
+    call: Async,
+    args: boolean,
+    rets: (enum { Success, Fail }, string)
 }`
 </script>
 
@@ -48,15 +58,16 @@ Use synchronous functions with extreme caution.
 This field determines the data that is sent to the server. It can be any [Zap type](./types.md).
 
 - If the client doesn't send any data, the `args` field should be excluded.
-- You can pass multiple arguments to the function by separating each type with a comma and wrapping them all in parentheses:
+- Parameter names and parentheses are optional to preserve backwards compatibility. If parantheses are excluded, the function can only have one unnamed parameter.
 
-<CodeBlock :code="multiArgsRetsExample" />
+<CodeBlock :code="argsExample" />
 
 ### `rets`
 
 This field determines the data that is sent back to the client from the server. It can be any [Zap type](./types.md).
 
 - If the server doesn't return any data, the `rets` field should be excluded.
+- Unlike `args`, `rets` cannot be named.
 - The function can return multiple values by separating each type with a comma and wrapping them all in parentheses:
 
-<CodeBlock :code="multiArgsRetsExample" />
+<CodeBlock :code="multipleRets" />

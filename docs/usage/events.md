@@ -3,17 +3,17 @@ const configFile = `event MyEvent = {
     from: Server,
     type: Reliable,
     call: ManyAsync,
-    data: struct {
+    data: (Options: struct {
         foo: string,
         bar: u8,
-    },
+    }),
 }
 
 event AnotherEvent = {
     from: Client,
     type: Reliable,
     call: SingleAsync,
-    data: (boolean, u8)
+    data: (Foo: boolean, Bar: u8)
 }`
 </script>
 
@@ -48,7 +48,7 @@ If your event's [call field](../config/events.md#call) is `SingleAsync` or `Sing
 local Zap = require(Path.To.Zap)
 
 -- only server listeners are given the player argument
-Zap.AnotherEvent.SetCallback(function(Player, Bool, Number)
+Zap.AnotherEvent.SetCallback(function(Player, Foo, Bar)
     -- Do something with the player and data
 end)
 ```
@@ -58,7 +58,7 @@ If your event's [call field](../config/events.md#call) is `ManyAsync` or `ManySy
 ```lua
 local Zap = require(Path.To.Zap)
 
-local Disconnect = Zap.MyEvent.On(function(Data)
+local Disconnect = Zap.MyEvent.On(function(Options)
     -- Do something with the data
 end)
 
