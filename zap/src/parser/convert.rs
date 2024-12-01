@@ -311,12 +311,33 @@ impl<'src> Converter<'src> {
 		}
 	}
 
+	fn check_duplicate_parameters(&mut self, syntax_parameters: &SyntaxParameters<'src>) {
+		let mut seen: HashMap<_, std::ops::Range<usize>> = HashMap::new();
+		for (identifier, _) in &syntax_parameters.parameters {
+			if let Some(identifier) = identifier {
+				if let Some(first_span) = seen.get(identifier.name) {
+					self.report(Report::AnalyzeDuplicateParameter {
+						prev_span: first_span.clone(),
+						dup_span: identifier.span(),
+						name: identifier.name,
+					});
+				} else {
+					seen.insert(identifier.name, identifier.span());
+				}
+			}
+		}
+	}
+
 	fn evdecl(
 		&mut self,
 		evdecl: &SyntaxEvDecl<'src>,
 		id: usize,
 		tydecls: &HashMap<&'src str, &Ty<'src>>,
 	) -> EvDecl<'src> {
+		if let Some(syntax_parameters) = &evdecl.data {
+			self.check_duplicate_parameters(syntax_parameters);
+		}
+
 		let name = evdecl.name.name;
 		let from = evdecl.from;
 		let evty = evdecl.evty;
@@ -332,23 +353,6 @@ impl<'src> Converter<'src> {
 				})
 				.collect::<Vec<_>>()
 		});
-
-		if let Some(syntax_parameters) = &evdecl.data {
-			let mut seen: HashMap<_, std::ops::Range<usize>> = HashMap::new();
-			for (identifier, _) in &syntax_parameters.parameters {
-				if let Some(identifier) = identifier {
-					if let Some(first_span) = seen.get(identifier.name) {
-						self.report(Report::AnalyzeDuplicateParameter {
-							prev_span: first_span.clone(),
-							dup_span: identifier.span(),
-							name: identifier.name,
-						});
-					} else {
-						seen.insert(identifier.name, identifier.span());
-					}
-				}
-			}
-		}
 
 		if data.is_some() && evty == EvType::Unreliable {
 			let mut min = 0;
@@ -393,6 +397,10 @@ impl<'src> Converter<'src> {
 	}
 
 	fn fndecl(&mut self, fndecl: &SyntaxFnDecl<'src>, id: usize) -> FnDecl<'src> {
+		if let Some(syntax_parameters) = &fndecl.args {
+			self.check_duplicate_parameters(syntax_parameters);
+		}
+
 		let name = fndecl.name.name;
 		let call = fndecl.call;
 		let args = fndecl.args.as_ref().map(|parameters| {
