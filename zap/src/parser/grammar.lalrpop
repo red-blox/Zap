@@ -44,7 +44,7 @@ FnDecl: SyntaxFnDecl<'input> = {
     <start:@L> "funct" <name:Identifier> "=" "{"
         "call" ":" <call:FnCall>
         <args:("," "args" ":" <Parameters>)?>
-        <rets:("," "rets" ":" <TyList>)?>
+        <rets:("," "rets" ":" <Parameters>)?>
         ","?
     "}" ";"? <end:@R> => SyntaxFnDecl { start, name, call, args, rets, end },
 }
@@ -114,11 +114,6 @@ TyKind: SyntaxTyKind<'input> = {
     "enum" <e:Enum> => SyntaxTyKind::Enum(e),
     "struct" <s:Struct> => SyntaxTyKind::Struct(s),
     "Instance" <c:("(" <Identifier> ")")?> => SyntaxTyKind::Instance(c),
-}
-
-TyList: Vec<SyntaxTy<'input>> = {
-    <ty:Ty> => vec![ty],
-    "(" <tys:Comma<Ty>> ")" => tys,
 }
 
 Parameters: SyntaxParameters<'input> = {

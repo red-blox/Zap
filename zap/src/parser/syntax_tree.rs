@@ -79,7 +79,7 @@ pub struct SyntaxFnDecl<'src> {
 	pub name: SyntaxIdentifier<'src>,
 	pub call: FnCall,
 	pub args: Option<SyntaxParameters<'src>>,
-	pub rets: Option<Vec<SyntaxTy<'src>>>,
+	pub rets: Option<SyntaxParameters<'src>>,
 	pub end: usize,
 }
 

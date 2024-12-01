@@ -401,6 +401,16 @@ impl<'src> Converter<'src> {
 			self.check_duplicate_parameters(syntax_parameters);
 		}
 
+		if let Some(syntax_parameters) = &fndecl.rets {
+			for parameter in &syntax_parameters.parameters {
+				if let Some(identifier) = parameter.0 {
+					self.report(Report::AnalyzeNamedReturn {
+						name_span: identifier.span(),
+					});
+				}
+			}
+		}
+
 		let name = fndecl.name.name;
 		let call = fndecl.call;
 		let args = fndecl.args.as_ref().map(|parameters| {
@@ -415,10 +425,13 @@ impl<'src> Converter<'src> {
 				.collect::<Vec<_>>()
 		});
 
-		let rets = fndecl
-			.rets
-			.as_ref()
-			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
+		let rets = fndecl.rets.as_ref().map(|parameters| {
+			parameters
+				.parameters
+				.iter()
+				.map(|(_, ty)| self.ty(ty))
+				.collect::<Vec<_>>()
+		});
 
 		FnDecl {
 			name,
