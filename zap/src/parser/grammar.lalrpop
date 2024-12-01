@@ -43,7 +43,7 @@ Decl: SyntaxDecl<'input> = {
 FnDecl: SyntaxFnDecl<'input> = {
     <start:@L> "funct" <name:Identifier> "=" "{"
         "call" ":" <call:FnCall>
-        <args:("," "args" ":" <Paremeters>)?>
+        <args:("," "args" ":" <Parameters>)?>
         <rets:("," "rets" ":" <TyList>)?>
         ","?
     "}" ";"? <end:@R> => SyntaxFnDecl { start, name, call, args, rets, end },
@@ -59,7 +59,7 @@ EvDecl: SyntaxEvDecl<'input> = {
         "from" ":" <from:EvSource>
         "," "type" ":" <evty:EvTy>
         "," "call" ":" <call:EvCall>
-        <data:("," "data" ":" <Paremeters>)?>
+        <data:("," "data" ":" <Parameters>)?>
         ","?
     "}" ";"? <end:@R> => SyntaxEvDecl { start, name, from, evty, call, data, end },
 }
@@ -121,7 +121,7 @@ TyList: Vec<SyntaxTy<'input>> = {
     "(" <tys:Comma<Ty>> ")" => tys,
 }
 
-Paremeters: SyntaxParameters<'input> = {
+Parameters: SyntaxParameters<'input> = {
     <start:@L>
         <parameters:ParameterList>
     <end:@R> => SyntaxParameters { start, parameters, end },
