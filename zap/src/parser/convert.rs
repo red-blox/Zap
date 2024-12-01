@@ -333,6 +333,23 @@ impl<'src> Converter<'src> {
 				.collect::<Vec<_>>()
 		});
 
+		if let Some(syntax_parameters) = &evdecl.data {
+			let mut seen: HashMap<_, std::ops::Range<usize>> = HashMap::new();
+			for (identifier, _) in &syntax_parameters.parameters {
+				if let Some(identifier) = identifier {
+					if let Some(first_span) = seen.get(identifier.name) {
+						self.report(Report::AnalyzeDuplicateParameter {
+							prev_span: first_span.clone(),
+							dup_span: identifier.span(),
+							name: identifier.name,
+						});
+					} else {
+						seen.insert(identifier.name, identifier.span());
+					}
+				}
+			}
+		}
+
 		if data.is_some() && evty == EvType::Unreliable {
 			let mut min = 0;
 			let mut max = Some(0);
