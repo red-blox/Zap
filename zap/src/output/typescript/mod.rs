@@ -1,4 +1,4 @@
-use crate::config::{Config, Enum, Ty};
+use crate::config::{Config, Enum, Parameter, Ty};
 
 pub mod client;
 pub mod server;
@@ -224,19 +224,24 @@ pub trait Output: ConfigProvider {
 		}
 	}
 
-	fn push_parameters(&mut self, types: &[Ty]) {
+	fn push_parameters(&mut self, parameters: &[Parameter]) {
 		let value = self.get_config().casing.with("Value", "value", "value");
 
-		for (i, ty) in types.iter().enumerate() {
+		for (i, parameter) in parameters.iter().enumerate() {
 			if i > 0 {
 				self.push(", ");
 			}
 
-			self.push(&format!(
-				"{value}{}",
-				if i > 0 { (i + 1).to_string() } else { "".to_string() },
-			));
-			self.push_arg_ty(ty);
+			if let Some(name) = parameter.name {
+				self.push(name);
+			} else {
+				self.push(&format!(
+					"{value}{}",
+					if i > 0 { (i + 1).to_string() } else { "".to_string() },
+				));
+			}
+
+			self.push_arg_ty(&parameter.ty);
 		}
 	}
 

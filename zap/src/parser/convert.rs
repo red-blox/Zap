@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::config::{Casing, Config, Enum, EvDecl, EvType, FnDecl, NumTy, Range, Struct, Ty, TyDecl, YieldType};
+use crate::config::{
+	Casing, Config, Enum, EvDecl, EvType, FnDecl, NumTy, Parameter, Range, Struct, Ty, TyDecl, YieldType,
+};
 
 use super::{
 	reports::{Report, Span},
@@ -309,27 +311,55 @@ impl<'src> Converter<'src> {
 		}
 	}
 
+	fn check_duplicate_parameters(&mut self, syntax_parameters: &SyntaxParameters<'src>) {
+		let mut seen: HashMap<_, std::ops::Range<usize>> = HashMap::new();
+		for (identifier, _) in &syntax_parameters.parameters {
+			if let Some(identifier) = identifier {
+				if let Some(first_span) = seen.get(identifier.name) {
+					self.report(Report::AnalyzeDuplicateParameter {
+						prev_span: first_span.clone(),
+						dup_span: identifier.span(),
+						name: identifier.name,
+					});
+				} else {
+					seen.insert(identifier.name, identifier.span());
+				}
+			}
+		}
+	}
+
 	fn evdecl(
 		&mut self,
 		evdecl: &SyntaxEvDecl<'src>,
 		id: usize,
 		tydecls: &HashMap<&'src str, &Ty<'src>>,
 	) -> EvDecl<'src> {
+		if let Some(syntax_parameters) = &evdecl.data {
+			self.check_duplicate_parameters(syntax_parameters);
+		}
+
 		let name = evdecl.name.name;
 		let from = evdecl.from;
 		let evty = evdecl.evty;
 		let call = evdecl.call;
-		let data = evdecl
-			.data
-			.as_ref()
-			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
+		let data = evdecl.data.as_ref().map(|parameters| {
+			parameters
+				.parameters
+				.iter()
+				.map(|(identifier, ty)| {
+					let name = identifier.map(|identifier| identifier.name);
+
+					Parameter { name, ty: self.ty(ty) }
+				})
+				.collect::<Vec<_>>()
+		});
 
 		if data.is_some() && evty == EvType::Unreliable {
 			let mut min = 0;
 			let mut max = Some(0);
 
-			for ty in data.as_ref().unwrap() {
-				let (ty_min, ty_max) = ty.size(tydecls, &mut HashSet::new());
+			for parameter in data.as_ref().unwrap() {
+				let (ty_min, ty_max) = parameter.ty.size(tydecls, &mut HashSet::new());
 
 				min += ty_min;
 
@@ -361,26 +391,51 @@ impl<'src> Converter<'src> {
 			from,
 			evty,
 			call,
-			data,
+			data: data.unwrap_or_default(),
 			id,
 		}
 	}
 
 	fn fndecl(&mut self, fndecl: &SyntaxFnDecl<'src>, id: usize) -> FnDecl<'src> {
+		if let Some(syntax_parameters) = &fndecl.args {
+			self.check_duplicate_parameters(syntax_parameters);
+		}
+
+		if let Some(syntax_parameters) = &fndecl.rets {
+			for parameter in &syntax_parameters.parameters {
+				if let Some(identifier) = parameter.0 {
+					self.report(Report::AnalyzeNamedReturn {
+						name_span: identifier.span(),
+					});
+				}
+			}
+		}
+
 		let name = fndecl.name.name;
 		let call = fndecl.call;
-		let args = fndecl
-			.args
-			.as_ref()
-			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
-		let rets = fndecl
-			.rets
-			.as_ref()
-			.map(|types| types.iter().map(|ty| self.ty(ty)).collect::<Vec<_>>());
+		let args = fndecl.args.as_ref().map(|parameters| {
+			parameters
+				.parameters
+				.iter()
+				.map(|(identifier, ty)| {
+					let name = identifier.map(|identifier| identifier.name);
+
+					Parameter { name, ty: self.ty(ty) }
+				})
+				.collect::<Vec<_>>()
+		});
+
+		let rets = fndecl.rets.as_ref().map(|parameters| {
+			parameters
+				.parameters
+				.iter()
+				.map(|(_, ty)| self.ty(ty))
+				.collect::<Vec<_>>()
+		});
 
 		FnDecl {
 			name,
-			args,
+			args: args.unwrap_or_default(),
 			call,
 			rets,
 			id,

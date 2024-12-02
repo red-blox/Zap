@@ -14,18 +14,12 @@ impl Gen for Des {
 		self.buf.push(stmt);
 	}
 
-	fn gen(mut self, var: Var, types: &[Ty]) -> Vec<Stmt> {
-		for (i, ty) in types.iter().enumerate() {
-			let var = if i > 0 {
-				Var::Name(match &var {
-					Var::Name(name) => format!("{name}{}", i + 1),
-					_ => unreachable!(),
-				})
-			} else {
-				var.clone()
-			};
-
-			self.push_ty(ty, var);
+	fn gen<'a, I>(mut self, names: &[String], types: I) -> Vec<Stmt>
+	where
+		I: Iterator<Item = &'a Ty<'a>>,
+	{
+		for (ty, name) in types.zip(names) {
+			self.push_ty(ty, Var::Name(name.to_string()));
 		}
 
 		self.buf
@@ -431,11 +425,14 @@ impl Des {
 	}
 }
 
-pub fn gen(types: &[Ty], var: &str, checks: bool) -> Vec<Stmt> {
+pub fn gen<'a, I>(types: I, names: &[String], checks: bool) -> Vec<Stmt>
+where
+	I: IntoIterator<Item = &'a Ty<'a>>,
+{
 	Des {
 		checks,
 		buf: vec![],
 		var_occurrences: HashMap::new(),
 	}
-	.gen(var.into(), types)
+	.gen(names, types.into_iter())
 }

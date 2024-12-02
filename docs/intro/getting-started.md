@@ -7,25 +7,19 @@ event MyEvent = {
 	from: Server,
 	type: Reliable,
 	call: ManyAsync,
-	data: struct {
-		foo: u32,
-		bar: string,
-	},
+	data: (Foo: u32, Bar: string),
 }`
 
 const apiExample = `-- Server
 local Zap = require(path.to.server.output)
 
-Zap.MyEvent.FireAll({
-	foo = 123,
-	bar = "hello world",
-})
+Zap.MyEvent.FireAll(123, "hello world")
 
 -- Client
 local Zap = require(path.to.client.output)
 
-Zap.MyEvent.On(function(data)
-	print(data.foo, data.bar)
+Zap.MyEvent.On(function(Foo, Bar)
+	print(Foo, Bar)
 end)`
 </script>
 

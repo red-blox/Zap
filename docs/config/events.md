@@ -3,17 +3,21 @@ const example = `event MyEvent = {
 	from: Server,
 	type: Reliable,
 	call: ManyAsync,
-	data: struct {
-		foo: string,
-		bar: u8,
-	},
+	data: (Foo: boolean, Bar: u32, Baz: string)
 }`
 
-const dataExample = `event MyEvent = {
+const dataExample = `event OneUnnamedParameter = {
 	from: Server,
 	type: Reliable,
 	call: ManyAsync,
-	data: (boolean, u32, string)
+	data: boolean
+}
+
+event TwoUnnamedParameters = {
+	from: Server,
+	type: Reliable,
+	call: ManyAsync,
+	data: (boolean, u32)
 }`
 </script>
 
@@ -65,6 +69,6 @@ Use synchronous events with extreme caution.
 This field determines the data that is sent with the event. It can be any [Zap type](./types.md).
 
 - If the event does not require any data, the `data` field should be excluded.
-- You can pass multiple arguments to the event by separating each type with a comma and wrapping them all in parentheses:
+- Parameter names and parentheses are optional to preserve backwards compatibility. If parantheses are excluded, the event can only have one unnamed parameter.
 
 <CodeBlock :code="dataExample" />

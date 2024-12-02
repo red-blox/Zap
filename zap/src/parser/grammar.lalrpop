@@ -43,8 +43,8 @@ Decl: SyntaxDecl<'input> = {
 FnDecl: SyntaxFnDecl<'input> = {
     <start:@L> "funct" <name:Identifier> "=" "{"
         "call" ":" <call:FnCall>
-        <args:("," "args" ":" <TyList>)?>
-        <rets:("," "rets" ":" <TyList>)?>
+        <args:("," "args" ":" <Parameters>)?>
+        <rets:("," "rets" ":" <Parameters>)?>
         ","?
     "}" ";"? <end:@R> => SyntaxFnDecl { start, name, call, args, rets, end },
 }
@@ -59,7 +59,7 @@ EvDecl: SyntaxEvDecl<'input> = {
         "from" ":" <from:EvSource>
         "," "type" ":" <evty:EvTy>
         "," "call" ":" <call:EvCall>
-        <data:("," "data" ":" <TyList>)?>
+        <data:("," "data" ":" <Parameters>)?>
         ","?
     "}" ";"? <end:@R> => SyntaxEvDecl { start, name, from, evty, call, data, end },
 }
@@ -116,9 +116,20 @@ TyKind: SyntaxTyKind<'input> = {
     "Instance" <c:("(" <Identifier> ")")?> => SyntaxTyKind::Instance(c),
 }
 
-TyList: Vec<SyntaxTy<'input>> = {
-    <ty:Ty> => vec![ty],
-    "(" <tys:Comma<Ty>> ")" => tys,
+Parameters: SyntaxParameters<'input> = {
+    <start:@L>
+        <parameters:ParameterList>
+    <end:@R> => SyntaxParameters { start, parameters, end },
+}
+
+ParameterList: Vec<(Option<SyntaxIdentifier<'input>>, SyntaxTy<'input>)> = {
+    <ty:Ty> => vec![(None, ty)],
+    "(" <tys:Comma<Parameter>> ")" => tys,
+}
+
+Parameter: (Option<SyntaxIdentifier<'input>>, SyntaxTy<'input>) = {
+    <name:Identifier> ":" <ty:Ty> => (Some(name), ty),
+    <ty:Ty> => (None, ty),
 }
 
 Enum: SyntaxEnum<'input> = {

@@ -96,6 +96,16 @@ pub enum Report<'src> {
 		dup_span: Span,
 		name: &'src str,
 	},
+
+	AnalyzeDuplicateParameter {
+		prev_span: Span,
+		dup_span: Span,
+		name: &'src str,
+	},
+
+	AnalyzeNamedReturn {
+		name_span: Span,
+	},
 }
 
 impl<'src> Report<'src> {
@@ -122,6 +132,8 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => Severity::Error,
 			Self::AnalyzeMissingOptValue { .. } => Severity::Error,
 			Self::AnalyzeDuplicateDecl { .. } => Severity::Error,
+			Self::AnalyzeDuplicateParameter { .. } => Severity::Error,
+			Self::AnalyzeNamedReturn { .. } => Severity::Error,
 		}
 	}
 
@@ -151,6 +163,8 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => "unbounded recursive type".to_string(),
 			Self::AnalyzeMissingOptValue { .. } => "missing option expected".to_string(),
 			Self::AnalyzeDuplicateDecl { name, .. } => format!("duplicate declaration '{}'", name),
+			Self::AnalyzeDuplicateParameter { name, .. } => format!("duplicate parameter '{}'", name),
+			Self::AnalyzeNamedReturn { .. } => "rets cannot be named".to_string(),
 		}
 	}
 
@@ -177,6 +191,8 @@ impl<'src> Report<'src> {
 			Self::AnalyzeUnboundedRecursiveType { .. } => "3012",
 			Self::AnalyzeMissingOptValue { .. } => "3013",
 			Self::AnalyzeDuplicateDecl { .. } => "3014",
+			Self::AnalyzeDuplicateParameter { .. } => "3015",
+			Self::AnalyzeNamedReturn { .. } => "3016",
 		}
 	}
 
@@ -272,6 +288,19 @@ impl<'src> Report<'src> {
 					Label::primary((), dup_span.clone()).with_message("duplicate declaration"),
 				]
 			}
+
+			Self::AnalyzeDuplicateParameter {
+				prev_span, dup_span, ..
+			} => {
+				vec![
+					Label::secondary((), prev_span.clone()).with_message("first parameter"),
+					Label::primary((), dup_span.clone()).with_message("duplicate parameter"),
+				]
+			}
+
+			Self::AnalyzeNamedReturn { name_span } => {
+				vec![Label::primary((), name_span.clone()).with_message("must be removed")]
+			}
 		}
 	}
 
@@ -335,6 +364,8 @@ impl<'src> Report<'src> {
 				"the {expected} option should not be empty if {required_when}"
 			)]),
 			Self::AnalyzeDuplicateDecl { .. } => None,
+			Self::AnalyzeDuplicateParameter { .. } => None,
+			Self::AnalyzeNamedReturn { .. } => None,
 		}
 	}
 

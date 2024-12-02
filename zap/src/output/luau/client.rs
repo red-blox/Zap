@@ -1,6 +1,7 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, Ty, TyDecl, YieldType},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, Parameter, TyDecl, YieldType},
 	irgen::{des, ser},
+	output::{get_named_values, get_unnamed_values},
 };
 
 use super::Output;
@@ -103,14 +104,18 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line(&format!("function types.write_{name}(value: {name})"));
 		self.indent();
-		self.push_stmts(&ser::gen(&[ty.clone()], "value", self.config.write_checks));
+		self.push_stmts(&ser::gen(
+			&[ty.clone()],
+			&["value".to_string()],
+			self.config.write_checks,
+		));
 		self.dedent();
 		self.push_line("end");
 
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(&[ty.clone()], "value", false));
+		self.push_stmts(&des::gen(&[ty.clone()], &["value".to_string()], false));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -174,9 +179,9 @@ impl<'src> ClientOutput<'src> {
 		));
 	}
 
-	fn get_values(&self, data: &Option<Vec<Ty>>) -> String {
-		if let Some(types) = data {
-			(1..=types.len())
+	fn get_values(&self, count: usize) -> String {
+		if count > 0 {
+			(1..=count)
 				.map(|i| {
 					if i == 1 {
 						"value".to_string()
@@ -210,12 +215,16 @@ impl<'src> ClientOutput<'src> {
 
 		self.indent();
 
-		let values = self.get_values(&ev.data);
+		let values = self.get_values(ev.data.len());
 
 		self.push_line(&format!("local {values}"));
 
-		if let Some(data) = &ev.data {
-			self.push_stmts(&des::gen(data, "value", true));
+		if !ev.data.is_empty() {
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unnamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -247,8 +256,8 @@ impl<'src> ClientOutput<'src> {
 		self.push_line("else");
 		self.indent();
 
-		if let Some(types) = &ev.data {
-			if types.len() > 1 {
+		if !ev.data.is_empty() {
+			if ev.data.len() > 1 {
 				self.push_line(&format!("table.insert(event_queue[{id}], {{ {values} }})"));
 			} else {
 				self.push_line(&format!("table.insert(event_queue[{id}], value)"));
@@ -265,7 +274,7 @@ impl<'src> ClientOutput<'src> {
 
 		self.push("warn(`[ZAP] {");
 
-		if ev.data.is_some() {
+		if !ev.data.is_empty() {
 			self.push("#")
 		}
 
@@ -304,12 +313,12 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line("local call_id = buffer.readu8(incoming_buff, read(1))");
 
-		let values = self.get_values(&fndecl.rets);
+		let values = self.get_values(fndecl.rets.as_ref().map_or(0, |x| x.len()));
 
 		self.push_line(&format!("local {values}"));
 
 		if let Some(data) = &fndecl.rets {
-			self.push_stmts(&des::gen(data, "value", true));
+			self.push_stmts(&des::gen(data, &get_unnamed_values("value", data.len()), true));
 		}
 
 		match self.config.yield_type {
@@ -395,12 +404,16 @@ impl<'src> ClientOutput<'src> {
 
 		self.indent();
 
-		let values = self.get_values(&ev.data);
+		let values = self.get_values(ev.data.len());
 
 		self.push_line(&format!("local {values}"));
 
-		if let Some(data) = &ev.data {
-			self.push_stmts(&des::gen(data, "value", self.config.write_checks));
+		if !ev.data.is_empty() {
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unnamed_values("value", ev.data.len()),
+				self.config.write_checks,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -432,8 +445,8 @@ impl<'src> ClientOutput<'src> {
 		self.push_line("else");
 		self.indent();
 
-		if let Some(types) = &ev.data {
-			if types.len() > 1 {
+		if !ev.data.is_empty() {
+			if ev.data.len() > 1 {
 				self.push_line(&format!("table.insert(event_queue[{id}], {{ {values} }})"));
 			} else {
 				self.push_line(&format!("table.insert(event_queue[{id}], value)"));
@@ -450,7 +463,7 @@ impl<'src> ClientOutput<'src> {
 
 		self.push("warn(`[ZAP] {");
 
-		if ev.data.is_some() {
+		if !ev.data.is_empty() {
 			self.push("#")
 		}
 
@@ -528,7 +541,7 @@ impl<'src> ClientOutput<'src> {
 				self.push_line(&format!("events[{id}] = {{}}"));
 			}
 
-			if evdecl.data.is_some() {
+			if !evdecl.data.is_empty() {
 				self.push_line(&format!("event_queue[{id}] = {{}}"));
 			} else {
 				self.push_line(&format!("event_queue[{id}] = 0"));
@@ -548,20 +561,25 @@ impl<'src> ClientOutput<'src> {
 		));
 	}
 
-	fn push_value_parameters(&mut self, types: &[Ty]) {
-		for (i, ty) in types.iter().enumerate() {
-			let value = format!(
-				"{}{}",
-				self.config.casing.with("Value", "value", "value"),
-				if i == 0 { "".to_string() } else { (i + 1).to_string() }
-			);
-
+	fn push_value_parameters(&mut self, parameters: &[Parameter]) {
+		for (i, parameter) in parameters.iter().enumerate() {
 			if i > 0 {
 				self.push(", ");
 			}
 
-			self.push(&format!("{value}: "));
-			self.push_ty(ty);
+			if let Some(name) = parameter.name {
+				self.push(&format!("{name}: "));
+			} else {
+				let value = format!(
+					"{}{}",
+					self.config.casing.with("Value", "value", "value"),
+					if i == 0 { "".to_string() } else { (i + 1).to_string() }
+				);
+
+				self.push(&format!("{value}: "));
+			}
+
+			self.push_ty(&parameter.ty);
 		}
 	}
 
@@ -572,8 +590,8 @@ impl<'src> ClientOutput<'src> {
 		self.push_indent();
 		self.push(&format!("{fire} = function("));
 
-		if let Some(types) = &ev.data {
-			self.push_value_parameters(types);
+		if !ev.data.is_empty() {
+			self.push_value_parameters(&ev.data);
 		}
 
 		self.push(")\n");
@@ -586,8 +604,12 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(data) = &ev.data {
-			self.push_stmts(&ser::gen(data, value, self.config.write_checks));
+		if !ev.data.is_empty() {
+			self.push_stmts(&ser::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_named_values(value, &ev.data),
+				self.config.write_checks,
+			));
 		}
 
 		if ev.evty == EvType::Unreliable {
@@ -618,8 +640,8 @@ impl<'src> ClientOutput<'src> {
 		}
 	}
 
-	fn push_queued_value(&mut self, types: &[Ty]) {
-		if types.len() > 1 {
+	fn push_queued_value(&mut self, parameters: &[Parameter]) {
+		if parameters.len() > 1 {
 			self.push("unpack(value)");
 		} else {
 			self.push("value");
@@ -635,8 +657,8 @@ impl<'src> ClientOutput<'src> {
 		self.push_indent();
 		self.push(&format!("{set_callback} = function({callback}: ("));
 
-		if let Some(types) = &ev.data {
-			self.push_value_parameters(types);
+		if !ev.data.is_empty() {
+			self.push_value_parameters(&ev.data);
 		}
 
 		self.push(") -> ()): () -> ()\n");
@@ -644,19 +666,19 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line(&format!("events[{id}] = {callback}"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push_line(&format!("for _, value in event_queue[{id}] do"));
 			self.indent();
 
 			if ev.call == EvCall::SingleSync {
 				self.push_indent();
 				self.push(&format!("{callback}("));
-				self.push_queued_value(types);
+				self.push_queued_value(&ev.data);
 				self.push_line(")\n");
 			} else {
 				self.push_indent();
 				self.push(&format!("task.spawn({callback}, "));
-				self.push_queued_value(types);
+				self.push_queued_value(&ev.data);
 				self.push(")\n");
 			}
 
@@ -701,8 +723,8 @@ impl<'src> ClientOutput<'src> {
 		self.push_indent();
 		self.push(&format!("{on} = function({callback}: ("));
 
-		if let Some(types) = &ev.data {
-			self.push_value_parameters(types);
+		if !ev.data.is_empty() {
+			self.push_value_parameters(&ev.data);
 		}
 
 		self.push(") -> ())\n");
@@ -710,19 +732,19 @@ impl<'src> ClientOutput<'src> {
 
 		self.push_line(&format!("table.insert(events[{id}], {callback})"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push_line(&format!("for _, value in event_queue[{id}] do"));
 			self.indent();
 
 			if ev.call == EvCall::ManySync {
 				self.push_indent();
 				self.push(&format!("{callback}("));
-				self.push_queued_value(types);
+				self.push_queued_value(&ev.data);
 				self.push_line(")\n");
 			} else {
 				self.push_indent();
 				self.push(&format!("task.spawn({callback}, "));
-				self.push_queued_value(types);
+				self.push_queued_value(&ev.data);
 				self.push(")\n");
 			}
 
@@ -793,8 +815,8 @@ impl<'src> ClientOutput<'src> {
 			self.push_indent();
 			self.push(&format!("{call} = function("));
 
-			if let Some(types) = &fndecl.args {
-				self.push_value_parameters(types);
+			if !fndecl.args.is_empty() {
+				self.push_value_parameters(&fndecl.args);
 			}
 
 			self.push(")");
@@ -848,8 +870,12 @@ impl<'src> ClientOutput<'src> {
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, function_call_id)");
 
-			if let Some(data) = &fndecl.args {
-				self.push_stmts(&ser::gen(data, value, self.config.write_checks));
+			if !fndecl.args.is_empty() {
+				self.push_stmts(&ser::gen(
+					fndecl.args.iter().map(|parameter| &parameter.ty),
+					&get_named_values(value, &fndecl.args),
+					self.config.write_checks,
+				));
 			}
 
 			match self.config.yield_type {

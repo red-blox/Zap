@@ -1,6 +1,7 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Ty, TyDecl},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Parameter, TyDecl},
 	irgen::{des, ser},
+	output::{get_named_values, get_unnamed_values},
 };
 
 use super::Output;
@@ -115,14 +116,18 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line(&format!("function types.write_{name}(value: {name})"));
 		self.indent();
-		self.push_stmts(&ser::gen(&[ty.clone()], "value", self.config.write_checks));
+		self.push_stmts(&ser::gen(
+			&[ty.clone()],
+			&["value".to_string()],
+			self.config.write_checks,
+		));
 		self.dedent();
 		self.push_line("end");
 
 		self.push_line(&format!("function types.read_{name}()"));
 		self.indent();
 		self.push_line("local value;");
-		self.push_stmts(&des::gen(&[ty.clone()], "value", true));
+		self.push_stmts(&des::gen(&[ty.clone()], &["value".to_string()], true));
 		self.push_line("return value");
 		self.dedent();
 		self.push_line("end");
@@ -186,9 +191,9 @@ impl<'a> ServerOutput<'a> {
 		));
 	}
 
-	fn get_values(&self, data: &Option<Vec<Ty>>) -> String {
-		if let Some(types) = data {
-			(1..=types.len())
+	fn get_values(&self, parameters: &[Parameter]) -> String {
+		if !parameters.is_empty() {
+			(1..=parameters.len())
 				.map(|i| {
 					if i == 1 {
 						"value".to_string()
@@ -226,8 +231,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line(&format!("local {values}"));
 
-		if let Some(data) = &ev.data {
-			self.push_stmts(&des::gen(data, "value", true));
+		if !ev.data.is_empty() {
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unnamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -273,16 +282,20 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line(&format!("local {values}"));
 
-		if let Some(data) = &fndecl.args {
-			self.push_stmts(&des::gen(data, "value", true));
+		if !fndecl.args.is_empty() {
+			self.push_stmts(&des::gen(
+				fndecl.args.iter().map(|parameter| &parameter.ty),
+				&get_unnamed_values("value", fndecl.args.len()),
+				true,
+			));
 		}
 
 		self.push_line(&format!("if events[{id}] then"));
 
 		self.indent();
 
-		let rets = if let Some(types) = &fndecl.args {
-			(1..=types.len())
+		let rets = if !fndecl.args.is_empty() {
+			(1..=fndecl.args.len())
 				.map(|i| {
 					if i > 1 {
 						format!("rets{}", i)
@@ -297,8 +310,8 @@ impl<'a> ServerOutput<'a> {
 		};
 
 		if fndecl.call == FnCall::Async {
-			let args = if let Some(types) = &fndecl.args {
-				(1..=types.len())
+			let args = if !fndecl.args.is_empty() {
+				(1..=fndecl.args.len())
 					.map(|i| format!("value_{}", i))
 					.collect::<Vec<_>>()
 					.join(", ")
@@ -318,8 +331,12 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id_2)");
 
-			if let Some(ty) = &fndecl.rets {
-				self.push_stmts(&ser::gen(ty, "rets", self.config.write_checks));
+			if let Some(types) = &fndecl.rets {
+				self.push_stmts(&ser::gen(
+					types,
+					&get_unnamed_values("rets", types.len()),
+					self.config.write_checks,
+				));
 			}
 
 			self.push_line("player_map[player_2] = save()");
@@ -335,8 +352,12 @@ impl<'a> ServerOutput<'a> {
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id)");
 
-			if let Some(ty) = &fndecl.rets {
-				self.push_stmts(&ser::gen(ty, "rets", self.config.write_checks));
+			if let Some(types) = &fndecl.rets {
+				self.push_stmts(&ser::gen(
+					types,
+					&get_unnamed_values("rets", types.len()),
+					self.config.write_checks,
+				));
 			}
 
 			self.push_line("player_map[player] = save()");
@@ -421,8 +442,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line(&format!("local {}", values));
 
-		if let Some(data) = &ev.data {
-			self.push_stmts(&des::gen(data, "value", true));
+		if !ev.data.is_empty() {
+			self.push_stmts(&des::gen(
+				ev.data.iter().map(|parameter| &parameter.ty),
+				&get_unnamed_values("value", ev.data.len()),
+				true,
+			));
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
@@ -495,25 +520,30 @@ impl<'a> ServerOutput<'a> {
 		));
 	}
 
-	fn push_value_parameters(&mut self, types: &[Ty]) {
-		for (i, ty) in types.iter().enumerate() {
-			let value = format!(
-				"{}{}",
-				self.config.casing.with("Value", "value", "value"),
-				if i == 0 { "".to_string() } else { (i + 1).to_string() }
-			);
-
+	fn push_value_parameters(&mut self, parameters: &[Parameter]) {
+		for (i, parameter) in parameters.iter().enumerate() {
 			if i > 0 {
 				self.push(", ");
 			}
 
-			self.push(&format!("{value}: "));
-			self.push_ty(ty);
+			if let Some(name) = parameter.name {
+				self.push(&format!("{name}: "));
+			} else {
+				let value = format!(
+					"{}{}",
+					self.config.casing.with("Value", "value", "value"),
+					if i == 0 { "".to_string() } else { (i + 1).to_string() }
+				);
+
+				self.push(&format!("{value}: "));
+			}
+
+			self.push_ty(&parameter.ty);
 		}
 	}
 
 	fn push_return_fire(&mut self, ev: &EvDecl) {
-		let types = &ev.data;
+		let parameters = &ev.data;
 
 		let fire = self.config.casing.with("Fire", "fire", "fire");
 		let player = self.config.casing.with("Player", "player", "player");
@@ -522,9 +552,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire} = function({player}: Player"));
 
-		if let Some(types) = types {
+		if !parameters.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(parameters);
 		}
 
 		self.push(")\n");
@@ -537,8 +567,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(types) = types {
-			self.push_stmts(&ser::gen(types, value, self.config.write_checks));
+		if !parameters.is_empty() {
+			self.push_stmts(&ser::gen(
+				parameters.iter().map(|parameter| &parameter.ty),
+				&get_named_values(value, parameters),
+				self.config.write_checks,
+			));
 		}
 
 		match ev.evty {
@@ -555,7 +589,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_all(&mut self, ev: &EvDecl) {
-		let types = &ev.data;
+		let parameters = &ev.data;
 
 		let fire_all = self.config.casing.with("FireAll", "fireAll", "fire_all");
 		let value = self.config.casing.with("Value", "value", "value");
@@ -563,8 +597,8 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_all} = function("));
 
-		if let Some(types) = types {
-			self.push_value_parameters(types);
+		if !parameters.is_empty() {
+			self.push_value_parameters(parameters);
 		}
 
 		self.push(")\n");
@@ -574,8 +608,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(types) = types {
-			self.push_stmts(&ser::gen(types, value, self.config.write_checks));
+		if !parameters.is_empty() {
+			self.push_stmts(&ser::gen(
+				parameters.iter().map(|parameter| &parameter.ty),
+				&get_named_values(value, parameters),
+				self.config.write_checks,
+			));
 		}
 
 		match ev.evty {
@@ -604,7 +642,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_except(&mut self, ev: &EvDecl) {
-		let types = &ev.data;
+		let parameters = &ev.data;
 
 		let fire_except = self.config.casing.with("FireExcept", "fireExcept", "fire_except");
 		let except = self.config.casing.with("Except", "except", "except");
@@ -613,9 +651,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_except} = function({except}: Player"));
 
-		if let Some(types) = types {
+		if !parameters.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(parameters);
 		}
 
 		self.push(")\n");
@@ -625,8 +663,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(types) = types {
-			self.push_stmts(&ser::gen(types, value, self.config.write_checks));
+		if !parameters.is_empty() {
+			self.push_stmts(&ser::gen(
+				parameters.iter().map(|paramater| &paramater.ty),
+				&get_named_values(value, parameters),
+				self.config.write_checks,
+			));
 		}
 
 		match ev.evty {
@@ -667,7 +709,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_list(&mut self, ev: &EvDecl) {
-		let types = &ev.data;
+		let parameters = &ev.data;
 
 		let fire_list = self.config.casing.with("FireList", "fireList", "fire_list");
 		let list = self.config.casing.with("List", "list", "list");
@@ -676,9 +718,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_list} = function({list}: {{ Player }}"));
 
-		if let Some(types) = types {
+		if !parameters.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(parameters);
 		}
 
 		self.push(")\n");
@@ -688,8 +730,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = types {
-			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
+		if !parameters.is_empty() {
+			self.push_stmts(&ser::gen(
+				parameters.iter().map(|parameter| &parameter.ty),
+				&get_named_values(value, parameters),
+				self.config.write_checks,
+			));
 		}
 
 		match ev.evty {
@@ -722,7 +768,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_return_fire_set(&mut self, ev: &EvDecl) {
-		let types = &ev.data;
+		let parameters = &ev.data;
 
 		let fire_set = self.config.casing.with("FireSet", "fireSet", "fire_set");
 		let set = self.config.casing.with("Set", "set", "set");
@@ -731,9 +777,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{fire_set} = function({set}: {{ [Player]: true }}"));
 
-		if let Some(types) = types {
+		if !parameters.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(parameters);
 		}
 
 		self.push(")\n");
@@ -743,8 +789,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_write_event_id(ev.id);
 
-		if let Some(ty) = types {
-			self.push_stmts(&ser::gen(ty, value, self.config.write_checks));
+		if !parameters.is_empty() {
+			self.push_stmts(&ser::gen(
+				parameters.iter().map(|parameter| &parameter.ty),
+				&get_named_values(value, parameters),
+				self.config.write_checks,
+			));
 		}
 
 		match ev.evty {
@@ -811,9 +861,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{set_callback} = function({callback}: ({player}: Player"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(&ev.data);
 		}
 
 		self.push(") -> ()): () -> ()\n");
@@ -843,9 +893,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{on} = function({callback}: ({player}: Player"));
 
-		if let Some(types) = &ev.data {
+		if !ev.data.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(&ev.data);
 		}
 
 		self.push(") -> ()): () -> ()\n");
@@ -877,9 +927,9 @@ impl<'a> ServerOutput<'a> {
 		self.push_indent();
 		self.push(&format!("{set_callback} = function({callback}: ({player}: Player"));
 
-		if let Some(types) = &fndecl.args {
+		if !fndecl.args.is_empty() {
 			self.push(", ");
-			self.push_value_parameters(types);
+			self.push_value_parameters(&fndecl.args);
 		}
 
 		self.push(") -> (");
