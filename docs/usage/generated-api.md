@@ -3,10 +3,10 @@ const eventConfigFile = `event MyEvent = {
     from: Server,
     type: Reliable,
     call: ManyAsync,
-    data: (Options: struct {
+    data: struct {
         foo: string,
         bar: u8,
-    }),
+    }
 }
 
 event AnotherEvent = {
