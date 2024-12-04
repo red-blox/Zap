@@ -117,6 +117,10 @@ Zap.MyEvent.Fire(Player, {
 
 The `FireAll` function takes the event's data as its arguments. It will fire the event to all players.
 
+::: info
+`FireAll` can be disabled using the [disable_fire_all](../config/options.md#disable-fire-all) option. Attempting to call `FireAll` when `disable_fire_all = true` will produce an error.
+:::
+
 ```lua
 Zap.MyEvent.FireAll({
     foo = "baz",
