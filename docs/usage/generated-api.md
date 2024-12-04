@@ -178,10 +178,7 @@ In this section, we use the following Zap file as an example.
 The client has a single function for invoking the server, `Call`, which takes the function's data as its arguments.
 
 ```lua
-local score = Zap.GetScore.Call({
-    roundId = "ipsum-lorem-dolor"
-    category = "LowScore",
-})
+local score = Zap.GetScore.Call("round_ipsum-lorem", "LowScore")
 print(score)
 ```
 
@@ -191,7 +188,7 @@ print(score)
 The server has a single function for responding to client invocations, `SetCallback`. This is similar to `Zap.MyEvent.SetCallback`, but it instead has a return as defined by the Zap config.
 
 ```lua
-local function handleRequest(Player: Player, Value: { category: "AverageScore" | "HighScore" | "LowScore", roundId: string }): number
+local function handleRequest(Player: Player, roundId: string, category: "HighScore" | "LowScore" | "AverageScore"): number
     -- Do something with the data.
     return 0 -- We must return a u16 according to our Zap config.
 end
