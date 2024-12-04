@@ -26,7 +26,7 @@ const sidebar = [
     text: 'Using Zap',
     items: [
       { text: 'Generate Code', link: '/usage/generation' },
-      { text: 'Generated API', link: '/usage/generated-api' },
+      { text: 'Event and Function API', link: '/usage/generated-api' },
       { text: 'Tooling Integration', link: '/usage/tooling' },
     ]
   }
