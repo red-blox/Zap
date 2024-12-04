@@ -19,10 +19,7 @@ event AnotherEvent = {
 
 const functConfigFile = `funct GetScore = {
     call: Async,
-    args: struct {
-        roundId: string,
-        category: enum { HighScore, LowScore, AverageScore },
-    },
+    args: (roundId: string, category: enum { HighScore, LowScore, AverageScore })
     rets: u16,
 }
 `
