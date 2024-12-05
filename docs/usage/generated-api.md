@@ -27,18 +27,13 @@ const functConfigFile = `funct GetScore = {
 
 # Using Your Generated Code
 
-After [generating code](./generation.md), you will gain access to Zap's generated API. While this API is fully typesafe, meaning it will not throw errors for invalid usage, your static analysis tooling will. To solve this:
-
-- If you're using [VSCode](https://code.visualstudio.com/), we recommend installing the [Luau-LSP](https://marketplace.visualstudio.com/items?itemName=JohnnyMorganz.luau-lsp) extension.
-- If you're using Roblox Studio, you already have the proper Luau tooling.
+After [generating code](./generation.md), Zap provides two output files: the client API and the server API. Detailed documentation for both is provided below. 
 
 ::: info
 This page will assume you're using the default casing value of `PascalCase`.
 
 Learn more about casing options [here](../config/options.md#casing).
 :::
-
-Zap generates two output files: one with the client API and one with the server API.
 
 ## Event API
 
@@ -81,7 +76,7 @@ Remember that synchronous event callbacks must not yield or error:
 Use `Sync` events only when performance is critical.
 :::
 
-## Client API
+## Client Event API
 
 The client has a single function for firing events, `Fire`, which takes the event's data as its arguments.
 
@@ -89,7 +84,7 @@ The client has a single function for firing events, `Fire`, which takes the even
 Zap.AnotherEvent.Fire(true, 32)
 ```
 
-## Server API
+## Server Event API
 
 The server has many functions for firing events, each with their own use case.
 
@@ -171,7 +166,7 @@ In this section, we use the following Zap file as an example.
 
 <CodeBlock :code="functConfigFile" />
 
-## Client API
+## Client Function API
 
 ### Call
 
@@ -182,7 +177,7 @@ local score = Zap.GetScore.Call("round_ipsum-lorem", "LowScore")
 print(score)
 ```
 
-## Server API
+## Server Function API
 
 ### SetCallback
 The server has a single function for responding to client invocations, `SetCallback`. This is similar to `Zap.MyEvent.SetCallback`, but it instead has a return as defined by the Zap config.
