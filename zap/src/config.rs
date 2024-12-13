@@ -33,7 +33,7 @@ pub struct Config<'src> {
 
 impl<'src> Config<'src> {
 	pub fn event_id_ty(&self) -> NumTy {
-		NumTy::from_f64(1.0, self.evdecls.len() as f64)
+		NumTy::from_f64(1.0, (self.evdecls.len() + self.fndecls.len()) as f64)
 	}
 }
 
