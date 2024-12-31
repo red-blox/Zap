@@ -1,7 +1,10 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, Parameter, TyDecl, YieldType},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnDecl, NumTy, Parameter, TyDecl, YieldType},
 	irgen::{des, ser},
-	output::{get_named_values, get_unnamed_values},
+	output::{
+		get_named_values, get_unnamed_values,
+		luau::{event_queue_table_name, events_table_name},
+	},
 };
 
 use super::Output;
@@ -12,7 +15,7 @@ struct ClientOutput<'src> {
 	buf: String,
 }
 
-impl<'a> Output for ClientOutput<'a> {
+impl Output for ClientOutput<'_> {
 	fn push(&mut self, s: &str) {
 		self.buf.push_str(s);
 	}
@@ -172,10 +175,12 @@ impl<'src> ClientOutput<'src> {
 
 		self.indent();
 
+		let client_reliable_ty = self.config.client_reliable_ty();
+
 		self.push_line(&format!(
 			"local id = buffer.read{}(buff, read({}))",
-			self.config.event_id_ty(),
-			self.config.event_id_ty().size()
+			client_reliable_ty,
+			client_reliable_ty.size()
 		));
 	}
 
@@ -228,21 +233,21 @@ impl<'src> ClientOutput<'src> {
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
-			self.push_line(&format!("if events[{id}] then"));
+			self.push_line(&format!("if reliable_events[{id}] then"));
 		} else {
-			self.push_line(&format!("if events[{id}][1] then"));
+			self.push_line(&format!("if reliable_events[{id}][1] then"));
 		}
 
 		self.indent();
 
 		if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
-			self.push_line(&format!("for _, cb in events[{id}] do"));
+			self.push_line(&format!("for _, cb in reliable_events[{id}] do"));
 			self.indent();
 		}
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}]({values})")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], {values})")),
+			EvCall::SingleSync => self.push_line(&format!("reliable_events[{id}]({values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(reliable_events[{id}], {values})")),
 			EvCall::ManySync => self.push_line(&format!("cb({values})")),
 			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, {values})")),
 		}
@@ -258,15 +263,15 @@ impl<'src> ClientOutput<'src> {
 
 		if !ev.data.is_empty() {
 			if ev.data.len() > 1 {
-				self.push_line(&format!("table.insert(event_queue[{id}], {{ {values} }})"));
+				self.push_line(&format!("table.insert(reliable_event_queue[{id}], {{ {values} }})"));
 			} else {
-				self.push_line(&format!("table.insert(event_queue[{id}], value)"));
+				self.push_line(&format!("table.insert(reliable_event_queue[{id}], value)"));
 			}
 
-			self.push_line(&format!("if #event_queue[{id}] > 64 then"));
+			self.push_line(&format!("if #reliable_event_queue[{id}] > 64 then"));
 		} else {
-			self.push_line(&format!("event_queue[{id}] += 1"));
-			self.push_line(&format!("if event_queue[{id}] > 16 then"));
+			self.push_line(&format!("reliable_event_queue[{id}] += 1"));
+			self.push_line(&format!("if reliable_event_queue[{id}] > 16 then"));
 		}
 
 		self.indent();
@@ -279,7 +284,7 @@ impl<'src> ClientOutput<'src> {
 		}
 
 		self.push(&format!(
-			"event_queue[{id}]}} events in queue for {}. Did you forget to attach a listener?`)\n",
+			"reliable_event_queue[{id}]}} events in queue for {}. Did you forget to attach a listener?`)\n",
 			ev.name
 		));
 
@@ -293,7 +298,7 @@ impl<'src> ClientOutput<'src> {
 	}
 
 	fn push_fn_callback(&mut self, first: bool, fndecl: &FnDecl) {
-		let id = fndecl.id;
+		let client_id = fndecl.client_id;
 
 		self.push_indent();
 
@@ -306,7 +311,7 @@ impl<'src> ClientOutput<'src> {
 		// push_line is not used here as indent was pushed above
 		// and we don't want to push it twice, especially after
 		// the if/elseif
-		self.push(&format!("id == {id} then"));
+		self.push(&format!("id == {client_id} then"));
 		self.push("\n");
 
 		self.indent();
@@ -323,14 +328,16 @@ impl<'src> ClientOutput<'src> {
 
 		match self.config.yield_type {
 			YieldType::Yield | YieldType::Future => {
-				self.push_line(&format!("task.spawn(event_queue[{id}][call_id], {values})"));
+				self.push_line(&format!(
+					"task.spawn(reliable_event_queue[{client_id}][call_id], {values})"
+				));
 			}
 			YieldType::Promise => {
-				self.push_line(&format!("event_queue[{id}][call_id]({values})"));
+				self.push_line(&format!("reliable_event_queue[{client_id}][call_id]({values})"));
 			}
 		}
 
-		self.push_line(&format!("event_queue[{id}][call_id] = nil"));
+		self.push_line(&format!("reliable_event_queue[{client_id}][call_id] = nil"));
 
 		self.dedent();
 	}
@@ -378,10 +385,12 @@ impl<'src> ClientOutput<'src> {
 		self.push_line("incoming_read = 0");
 		self.push_line("incoming_ipos = 0");
 
+		let client_unreliable_ty = self.config.client_unreliable_ty();
+
 		self.push_line(&format!(
 			"local id = buffer.read{}(buff, read({}))",
-			self.config.event_id_ty(),
-			self.config.event_id_ty().size()
+			client_unreliable_ty,
+			client_unreliable_ty.size()
 		));
 	}
 
@@ -417,21 +426,21 @@ impl<'src> ClientOutput<'src> {
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
-			self.push_line(&format!("if events[{id}] then"));
+			self.push_line(&format!("if unreliable_events[{id}] then"));
 		} else {
-			self.push_line(&format!("if events[{id}][1] then"));
+			self.push_line(&format!("if unreliable_events[{id}][1] then"));
 		}
 
 		self.indent();
 
 		if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
-			self.push_line(&format!("for _, cb in events[{id}] do"));
+			self.push_line(&format!("for _, cb in unreliable_events[{id}] do"));
 			self.indent();
 		}
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}]({values})")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], {values})")),
+			EvCall::SingleSync => self.push_line(&format!("unreliable_events[{id}]({values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(unreliable_events[{id}], {values})")),
 			EvCall::ManySync => self.push_line(&format!("cb({values})")),
 			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, {values})")),
 		}
@@ -447,15 +456,15 @@ impl<'src> ClientOutput<'src> {
 
 		if !ev.data.is_empty() {
 			if ev.data.len() > 1 {
-				self.push_line(&format!("table.insert(event_queue[{id}], {{ {values} }})"));
+				self.push_line(&format!("table.insert(unreliable_event_queue[{id}], {{ {values} }})"));
 			} else {
-				self.push_line(&format!("table.insert(event_queue[{id}], value)"));
+				self.push_line(&format!("table.insert(unreliable_event_queue[{id}], value)"));
 			}
 
-			self.push_line(&format!("if #event_queue[{id}] > 64 then"));
+			self.push_line(&format!("if #unreliable_event_queue[{id}] > 64 then"));
 		} else {
-			self.push_line(&format!("event_queue[{id}] += 1"));
-			self.push_line(&format!("if event_queue[{id}] > 16 then"));
+			self.push_line(&format!("unreliable_event_queue[{id}] += 1"));
+			self.push_line(&format!("if unreliable_event_queue[{id}] > 16 then"));
 		}
 
 		self.indent();
@@ -468,7 +477,7 @@ impl<'src> ClientOutput<'src> {
 		}
 
 		self.push(&format!(
-			"event_queue[{id}]}} events in queue for {}. Did you forget to attach a listener?`)\n",
+			"unreliable_event_queue[{id}]}} events in queue for {}. Did you forget to attach a listener?`)\n",
 			ev.name
 		));
 
@@ -511,12 +520,20 @@ impl<'src> ClientOutput<'src> {
 
 	fn push_callback_lists(&mut self) {
 		self.push_line(&format!(
-			"local events = table.create({})",
-			self.config.evdecls.len() + self.config.fndecls.len()
+			"local reliable_events = table.create({})",
+			self.config.client_reliable_count()
 		));
 		self.push_line(&format!(
-			"local event_queue: {{ [number]: {{ any }} }} = table.create({})",
-			self.config.evdecls.len() + self.config.fndecls.len()
+			"local unreliable_events = table.create({})",
+			self.config.client_unreliable_count()
+		));
+		self.push_line(&format!(
+			"local reliable_event_queue: {{ [number]: {{ any }} }} = table.create({})",
+			self.config.client_reliable_count()
+		));
+		self.push_line(&format!(
+			"local unreliable_event_queue: {{ [number]: {{ any }} }} = table.create({})",
+			self.config.client_unreliable_count()
 		));
 
 		if !self.config.fndecls.is_empty() {
@@ -538,27 +555,36 @@ impl<'src> ClientOutput<'src> {
 			let id = evdecl.id;
 
 			if evdecl.call == EvCall::ManyAsync || evdecl.call == EvCall::ManySync {
-				self.push_line(&format!("events[{id}] = {{}}"));
+				self.push_line(&format!("{}[{}] = {{}}", events_table_name(evdecl), id));
 			}
 
 			if !evdecl.data.is_empty() {
-				self.push_line(&format!("event_queue[{id}] = {{}}"));
+				self.push_line(&format!("{}[{id}] = {{}}", event_queue_table_name(evdecl)));
 			} else {
-				self.push_line(&format!("event_queue[{id}] = 0"));
+				self.push_line(&format!("{}[{id}] = 0", event_queue_table_name(evdecl)));
 			}
 		}
 
 		for fndecl in self.config.fndecls.iter() {
-			self.push_line(&format!("event_queue[{}] = table.create(255)", fndecl.id));
+			self.push_line(&format!(
+				"reliable_event_queue[{}] = table.create(255)",
+				fndecl.client_id
+			));
 		}
 	}
 
-	fn push_write_event_id(&mut self, id: usize) {
-		self.push_line(&format!("alloc({})", self.config.event_id_ty().size()));
-		self.push_line(&format!(
-			"buffer.write{}(outgoing_buff, outgoing_apos, {id})",
-			self.config.event_id_ty()
-		));
+	fn push_write_event_id(&mut self, id: usize, num_ty: NumTy) {
+		self.push_line(&format!("alloc({})", num_ty.size()));
+		self.push_line(&format!("buffer.write{}(outgoing_buff, outgoing_apos, {id})", num_ty));
+	}
+
+	fn push_write_evdecl_event_id(&mut self, ev: &EvDecl) {
+		let num_ty = match ev.evty {
+			EvType::Reliable => self.config.server_reliable_ty(),
+			EvType::Unreliable => self.config.server_unreliable_ty(),
+		};
+
+		self.push_write_event_id(ev.id, num_ty);
 	}
 
 	fn push_value_parameters(&mut self, parameters: &[Parameter]) {
@@ -602,7 +628,7 @@ impl<'src> ClientOutput<'src> {
 			self.push_line("load_empty()");
 		}
 
-		self.push_write_event_id(ev.id);
+		self.push_write_evdecl_event_id(ev);
 
 		if !ev.data.is_empty() {
 			self.push_stmts(&ser::gen(
@@ -664,10 +690,12 @@ impl<'src> ClientOutput<'src> {
 		self.push(") -> ()): () -> ()\n");
 		self.indent();
 
-		self.push_line(&format!("events[{id}] = {callback}"));
+		self.push_line(&format!("{}[{id}] = {callback}", events_table_name(ev)));
+
+		let event_queue_name = event_queue_table_name(ev);
 
 		if !ev.data.is_empty() {
-			self.push_line(&format!("for _, value in event_queue[{id}] do"));
+			self.push_line(&format!("for _, value in {event_queue_name}[{id}] do"));
 			self.indent();
 
 			if ev.call == EvCall::SingleSync {
@@ -685,9 +713,9 @@ impl<'src> ClientOutput<'src> {
 			self.dedent();
 			self.push_line("end");
 
-			self.push_line(&format!("event_queue[{id}] = {{}}"));
+			self.push_line(&format!("{event_queue_name}[{id}] = {{}}"));
 		} else {
-			self.push_line(&format!("for _ = 1, event_queue[{id}] do"));
+			self.push_line(&format!("for _ = 1, {event_queue_name}[{id}] do"));
 			self.indent();
 
 			if ev.call == EvCall::SingleSync {
@@ -699,13 +727,13 @@ impl<'src> ClientOutput<'src> {
 			self.dedent();
 			self.push_line("end");
 
-			self.push_line(&format!("event_queue[{id}] = 0"));
+			self.push_line(&format!("{event_queue_name}[{id}] = 0"));
 		}
 
 		self.push_line("return function()");
 		self.indent();
 
-		self.push_line(&format!("events[{id}] = nil"));
+		self.push_line(&format!("{}[{id}] = nil", events_table_name(ev)));
 
 		self.dedent();
 		self.push_line("end");
@@ -730,10 +758,13 @@ impl<'src> ClientOutput<'src> {
 		self.push(") -> ())\n");
 		self.indent();
 
-		self.push_line(&format!("table.insert(events[{id}], {callback})"));
+		let events_table_name = events_table_name(ev);
+		let event_queue_name = event_queue_table_name(ev);
+
+		self.push_line(&format!("table.insert({events_table_name}[{id}], {callback})"));
 
 		if !ev.data.is_empty() {
-			self.push_line(&format!("for _, value in event_queue[{id}] do"));
+			self.push_line(&format!("for _, value in {event_queue_name}[{id}] do"));
 			self.indent();
 
 			if ev.call == EvCall::ManySync {
@@ -751,9 +782,9 @@ impl<'src> ClientOutput<'src> {
 			self.dedent();
 			self.push_line("end");
 
-			self.push_line(&format!("event_queue[{id}] = {{}}"));
+			self.push_line(&format!("{event_queue_name}[{id}] = {{}}"));
 		} else {
-			self.push_line(&format!("for _ = 1, event_queue[{id}] do"));
+			self.push_line(&format!("for _ = 1, {event_queue_name}[{id}] do"));
 			self.indent();
 
 			if ev.call == EvCall::ManySync {
@@ -765,14 +796,14 @@ impl<'src> ClientOutput<'src> {
 			self.dedent();
 			self.push_line("end");
 
-			self.push_line(&format!("event_queue[{id}] = 0"));
+			self.push_line(&format!("{event_queue_name}[{id}] = 0"));
 		}
 
 		self.push_line("return function()");
 		self.indent();
 
 		self.push_line(&format!(
-			"table.remove(events[{id}], table.find(events[{id}], {callback}))"
+			"table.remove({events_table_name}[{id}], table.find({events_table_name}[{id}], {callback}))"
 		));
 
 		self.dedent();
@@ -807,7 +838,7 @@ impl<'src> ClientOutput<'src> {
 		let value = self.config.casing.with("Value", "value", "value");
 
 		for fndecl in self.config.fndecls.iter() {
-			let id = fndecl.id;
+			let client_id = fndecl.client_id;
 
 			self.push_line(&format!("{name} = {{", name = fndecl.name));
 			self.indent();
@@ -852,13 +883,13 @@ impl<'src> ClientOutput<'src> {
 			self.push("\n");
 			self.indent();
 
-			self.push_write_event_id(fndecl.id);
+			self.push_write_event_id(fndecl.server_id, self.config.server_reliable_ty());
 
 			self.push_line("function_call_id += 1");
 
 			self.push_line("function_call_id %= 256");
 
-			self.push_line(&format!("if event_queue[{id}][function_call_id] then"));
+			self.push_line(&format!("if reliable_event_queue[{client_id}][function_call_id] then"));
 			self.indent();
 
 			self.push_line("function_call_id -= 1");
@@ -880,14 +911,18 @@ impl<'src> ClientOutput<'src> {
 
 			match self.config.yield_type {
 				YieldType::Yield => {
-					self.push_line(&format!("event_queue[{id}][function_call_id] = coroutine.running()",));
+					self.push_line(&format!(
+						"reliable_event_queue[{client_id}][function_call_id] = coroutine.running()"
+					));
 					self.push_line("return coroutine.yield()");
 				}
 				YieldType::Future => {
 					self.push_line("return Future.new(function()");
 					self.indent();
 
-					self.push_line(&format!("event_queue[{id}][function_call_id] = coroutine.running()",));
+					self.push_line(&format!(
+						"reliable_event_queue[{client_id}][function_call_id] = coroutine.running()"
+					));
 					self.push_line("return coroutine.yield()");
 
 					self.dedent();
@@ -897,7 +932,9 @@ impl<'src> ClientOutput<'src> {
 					self.push_line("return Promise.new(function(resolve)");
 					self.indent();
 
-					self.push_line(&format!("event_queue[{id}][function_call_id] = resolve"));
+					self.push_line(&format!(
+						"reliable_event_queue[{client_id}][function_call_id] = resolve"
+					));
 
 					self.dedent();
 					self.push_line("end)");

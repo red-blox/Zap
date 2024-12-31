@@ -31,9 +31,55 @@ pub struct Config<'src> {
 	pub disable_fire_all: bool,
 }
 
-impl<'src> Config<'src> {
-	pub fn event_id_ty(&self) -> NumTy {
-		NumTy::from_f64(1.0, (self.evdecls.len() + self.fndecls.len()) as f64)
+impl Config<'_> {
+	pub fn server_reliable_count(&self) -> usize {
+		let reliable_count = self
+			.evdecls
+			.iter()
+			.filter(|evdecl| evdecl.from == EvSource::Client && evdecl.evty == EvType::Reliable)
+			.count();
+
+		reliable_count + self.fndecls.len()
+	}
+
+	pub fn server_unreliable_count(&self) -> usize {
+		self.evdecls
+			.iter()
+			.filter(|evdecl| evdecl.from == EvSource::Client && evdecl.evty == EvType::Unreliable)
+			.count()
+	}
+
+	pub fn client_reliable_count(&self) -> usize {
+		let reliable_count = self
+			.evdecls
+			.iter()
+			.filter(|evdecl| evdecl.from == EvSource::Server && evdecl.evty == EvType::Reliable)
+			.count();
+
+		reliable_count + self.fndecls.len()
+	}
+
+	pub fn client_unreliable_count(&self) -> usize {
+		self.evdecls
+			.iter()
+			.filter(|evdecl| evdecl.from == EvSource::Server && evdecl.evty == EvType::Unreliable)
+			.count()
+	}
+
+	pub fn server_reliable_ty(&self) -> NumTy {
+		NumTy::from_f64(1.0, self.server_reliable_count() as f64)
+	}
+
+	pub fn server_unreliable_ty(&self) -> NumTy {
+		NumTy::from_f64(1.0, self.server_unreliable_count() as f64)
+	}
+
+	pub fn client_reliable_ty(&self) -> NumTy {
+		NumTy::from_f64(1.0, self.client_reliable_count() as f64)
+	}
+
+	pub fn client_unreliable_ty(&self) -> NumTy {
+		NumTy::from_f64(1.0, self.client_unreliable_count() as f64)
 	}
 }
 
@@ -78,7 +124,8 @@ pub struct FnDecl<'src> {
 	pub call: FnCall,
 	pub args: Vec<Parameter<'src>>,
 	pub rets: Option<Vec<Ty<'src>>>,
-	pub id: usize,
+	pub client_id: usize,
+	pub server_id: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

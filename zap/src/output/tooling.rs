@@ -1,5 +1,5 @@
 use crate::{
-	config::{Config, EvDecl, FnDecl, Parameter, TyDecl},
+	config::{Config, EvDecl, EvSource, EvType, FnDecl, NumTy, Parameter, TyDecl},
 	irgen::{des, Stmt},
 	output::get_unnamed_values,
 	Output,
@@ -201,8 +201,12 @@ impl<'src> ToolingOutput<'src> {
 		self.dedent();
 	}
 
-	fn push_function_callback(&mut self, first: bool, fn_decl: &FnDecl) {
-		let id = fn_decl.id;
+	fn push_function_callback(&mut self, first: bool, is_server: bool, fn_decl: &FnDecl) {
+		let id = if is_server {
+			fn_decl.server_id
+		} else {
+			fn_decl.client_id
+		};
 		let event_id = self.config.casing.with("EventId", "eventId", "event_id");
 		let call_id = self.config.casing.with("CallId", "callId", "call_id");
 
@@ -224,69 +228,61 @@ impl<'src> ToolingOutput<'src> {
 
 		self.push_line("local call_id = buffer.readu8(incoming_buff, read(1))");
 
-		self.push_line("if isServer then");
-		self.indent();
-
 		let values = self.get_values(&fn_decl.args);
 
-		self.push_line(&format!("local {values}"));
+		if is_server {
+			self.push_line(&format!("local {values}"));
 
-		if !fn_decl.args.is_empty() {
-			self.push_stmts(&des::gen(
-				fn_decl.args.iter().map(|parameter| &parameter.ty),
-				&get_unnamed_values("value", fn_decl.args.len()),
-				true,
-			));
+			if !fn_decl.args.is_empty() {
+				self.push_stmts(&des::gen(
+					fn_decl.args.iter().map(|parameter| &parameter.ty),
+					&get_unnamed_values("value", fn_decl.args.len()),
+					true,
+				));
+			}
+
+			self.push_line("table.insert(events, {");
+			self.indent();
+
+			self.push_line(&format!("Name = \"{} (request)\",", fn_decl.name));
+
+			self.push_indent();
+			self.push("Arguments = { ");
+
+			if self.config.tooling_show_internal_data {
+				self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
+			}
+
+			self.push(&format!("{values} }}"));
+			self.push("\n");
+
+			self.dedent();
+			self.push_line("})");
+		} else {
+			self.push_line(&format!("local {values}"));
+
+			if let Some(data) = &fn_decl.rets {
+				self.push_stmts(&des::gen(data, &get_unnamed_values("value", data.len()), true));
+			}
+
+			self.push_line("table.insert(events, {");
+			self.indent();
+
+			self.push_line(&format!("Name = \"{} (callback)\",", fn_decl.name));
+
+			self.push_indent();
+			self.push("Arguments = { ");
+
+			if self.config.tooling_show_internal_data {
+				self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
+			}
+
+			self.push(&format!("{values} }}"));
+			self.push("\n");
+
+			self.dedent();
+			self.push_line("})");
 		}
-
-		self.push_line("table.insert(events, {");
-		self.indent();
-
-		self.push_line(&format!("Name = \"{} (request)\",", fn_decl.name));
-
-		self.push_indent();
-		self.push("Arguments = { ");
-
-		if self.config.tooling_show_internal_data {
-			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
-		}
-
-		self.push(&format!("{values} }}"));
-		self.push("\n");
-
-		self.dedent();
-		self.push_line("})");
-
-		self.dedent();
-		self.push_line("else");
-		self.indent();
-
-		self.push_line(&format!("local {values}"));
-
-		if let Some(data) = &fn_decl.rets {
-			self.push_stmts(&des::gen(data, &get_unnamed_values("value", data.len()), true));
-		}
-
-		self.push_line("table.insert(events, {");
-		self.indent();
-
-		self.push_line(&format!("Name = \"{} (callback)\",", fn_decl.name));
-
-		self.push_indent();
-		self.push("Arguments = { ");
-
-		if self.config.tooling_show_internal_data {
-			self.push(&format!("{{ {} = id, {} = call_id }}, ", event_id, call_id));
-		}
-
-		self.push(&format!("{values} }}"));
-		self.push("\n");
-
-		self.dedent();
-		self.push_line("})");
-
-		self.dedent();
-		self.push_line("end");
 
 		self.dedent();
 	}
@@ -424,31 +420,46 @@ impl<'src> ToolingOutput<'src> {
 
 		self.indent();
 
-		self.push_line(&format!(
-			"local id = buffer.read{}(incoming_buff, read({}))",
-			self.config.event_id_ty(),
-			self.config.event_id_ty().size()
-		));
-
-		let mut first = true;
-
-		for ev in self.config.evdecls.iter() {
-			self.push_event_callback(first, ev);
-
-			first = false;
-		}
-
-		for fn_decl in self.config.fndecls.iter() {
-			self.push_function_callback(first, fn_decl);
-
-			first = false;
-		}
-
-		self.push_line("else");
+		self.push_line("if isServer and remote_instance == reliable then");
 		self.indent();
-		self.push_line("error(\"Unknown event id\")");
-
+		self.push_events(
+			true,
+			self.config.server_reliable_ty(),
+			EvSource::Client,
+			EvType::Reliable,
+		);
 		self.dedent();
+
+		self.push_line("elseif isServer and remote_instance == unreliable then");
+		self.indent();
+		self.push_events(
+			true,
+			self.config.server_unreliable_ty(),
+			EvSource::Client,
+			EvType::Unreliable,
+		);
+		self.dedent();
+
+		self.push_line("elseif not isServer and remote_instance == reliable then");
+		self.indent();
+		self.push_events(
+			false,
+			self.config.client_reliable_ty(),
+			EvSource::Server,
+			EvType::Reliable,
+		);
+		self.dedent();
+
+		self.push_line("elseif not isServer and remote_instance == unreliable then");
+		self.indent();
+		self.push_events(
+			false,
+			self.config.client_unreliable_ty(),
+			EvSource::Server,
+			EvType::Unreliable,
+		);
+		self.dedent();
+
 		self.push_line("end");
 
 		self.dedent();
@@ -461,6 +472,44 @@ impl<'src> ToolingOutput<'src> {
 		self.push_line("end");
 
 		self.buf
+	}
+
+	fn push_events(
+		&mut self,
+		is_server: bool,
+		event_ty: NumTy,
+		expected_ev_source: EvSource,
+		expected_ev_type: EvType,
+	) {
+		self.push_line(&format!(
+			"local id = buffer.read{}(incoming_buff, read({}))",
+			event_ty,
+			event_ty.size()
+		));
+
+		let mut first = true;
+
+		for ev in self.config.evdecls.iter() {
+			if ev.from != expected_ev_source || ev.evty != expected_ev_type {
+				continue;
+			}
+
+			self.push_event_callback(first, ev);
+			first = false;
+		}
+
+		if expected_ev_type == EvType::Reliable {
+			for fn_decl in self.config.fndecls.iter() {
+				self.push_function_callback(first, is_server, fn_decl);
+				first = false;
+			}
+		}
+
+		self.push_line("else");
+		self.indent();
+		self.push_line("error(\"Unknown event id\")");
+		self.dedent();
+		self.push_line("end");
 	}
 }
 
