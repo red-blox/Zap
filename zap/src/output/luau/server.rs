@@ -1,7 +1,7 @@
 use crate::{
-	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, Parameter, TyDecl},
+	config::{Config, EvCall, EvDecl, EvSource, EvType, FnCall, FnDecl, NumTy, Parameter, TyDecl},
 	irgen::{des, ser},
-	output::{get_named_values, get_unnamed_values},
+	output::{get_named_values, get_unnamed_values, luau::events_table_name},
 };
 
 use super::Output;
@@ -184,10 +184,12 @@ impl<'a> ServerOutput<'a> {
 
 		self.indent();
 
+		let server_reliable_ty = self.config.server_reliable_ty();
+
 		self.push_line(&format!(
 			"local id = buffer.read{}(buff, read({}))",
-			self.config.event_id_ty(),
-			self.config.event_id_ty().size()
+			server_reliable_ty,
+			server_reliable_ty.size()
 		));
 	}
 
@@ -240,16 +242,16 @@ impl<'a> ServerOutput<'a> {
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
-			self.push_line(&format!("if events[{id}] then"))
+			self.push_line(&format!("if reliable_events[{id}] then"))
 		} else {
-			self.push_line(&format!("for _, cb in events[{id}] do"))
+			self.push_line(&format!("for _, cb in reliable_events[{id}] do"))
 		}
 
 		self.indent();
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, {values})")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, {values})")),
+			EvCall::SingleSync => self.push_line(&format!("reliable_events[{id}](player, {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(reliable_events[{id}], player, {values})")),
 			EvCall::ManySync => self.push_line(&format!("cb(player, {values})")),
 			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, player, {values})")),
 		}
@@ -261,7 +263,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_fn_callback(&mut self, first: bool, fndecl: &FnDecl) {
-		let id = fndecl.id;
+		let server_id = fndecl.server_id;
 
 		self.push_indent();
 
@@ -271,7 +273,7 @@ impl<'a> ServerOutput<'a> {
 			self.push("elseif ");
 		}
 
-		self.push(&format!("id == {id} then"));
+		self.push(&format!("id == {server_id} then"));
 		self.push("\n");
 
 		self.indent();
@@ -290,7 +292,7 @@ impl<'a> ServerOutput<'a> {
 			));
 		}
 
-		self.push_line(&format!("if events[{id}] then"));
+		self.push_line(&format!("if events[{server_id}] then"));
 
 		self.indent();
 
@@ -323,10 +325,10 @@ impl<'a> ServerOutput<'a> {
 			self.push_line(&format!("task.spawn(function(player_2, call_id_2, {args})"));
 			self.indent();
 
-			self.push_line(&format!("local {rets} = events[{id}](player_2, {args})"));
+			self.push_line(&format!("local {rets} = events[{server_id}](player_2, {args})"));
 
 			self.push_line("load_player(player_2)");
-			self.push_write_event_id(fndecl.id);
+			self.push_write_event_id(fndecl.client_id, self.config.client_reliable_ty());
 
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id_2)");
@@ -344,10 +346,10 @@ impl<'a> ServerOutput<'a> {
 			self.dedent();
 			self.push_line(&format!("end, player, call_id, {values})"));
 		} else {
-			self.push_line(&format!("local {rets} = events[{id}](player, {values})"));
+			self.push_line(&format!("local {rets} = events[{server_id}](player, {values})"));
 
 			self.push_line("load_player(player)");
-			self.push_write_event_id(fndecl.id);
+			self.push_write_event_id(fndecl.client_id, self.config.client_reliable_ty());
 
 			self.push_line("alloc(1)");
 			self.push_line("buffer.writeu8(outgoing_buff, outgoing_apos, call_id)");
@@ -412,10 +414,12 @@ impl<'a> ServerOutput<'a> {
 		self.push_line("incoming_read = 0");
 		self.push_line("incoming_ipos = 0");
 
+		let server_unreliable_ty = self.config.server_unreliable_ty();
+
 		self.push_line(&format!(
 			"local id = buffer.read{}(buff, read({}))",
-			self.config.event_id_ty(),
-			self.config.event_id_ty().size()
+			server_unreliable_ty,
+			server_unreliable_ty.size()
 		));
 	}
 
@@ -451,16 +455,16 @@ impl<'a> ServerOutput<'a> {
 		}
 
 		if ev.call == EvCall::SingleSync || ev.call == EvCall::SingleAsync {
-			self.push_line(&format!("if events[{id}] then"))
+			self.push_line(&format!("if unreliable_events[{id}] then"))
 		} else {
-			self.push_line(&format!("for _, cb in events[{id}] do"))
+			self.push_line(&format!("for _, cb in unreliable_events[{id}] do"))
 		}
 
 		self.indent();
 
 		match ev.call {
-			EvCall::SingleSync => self.push_line(&format!("events[{id}](player, {values})")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], player, {values})")),
+			EvCall::SingleSync => self.push_line(&format!("unreliable_events[{id}](player, {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("task.spawn(unreliable_events[{id}], player, {values})")),
 			EvCall::ManySync => self.push_line(&format!("cb(player, {values})")),
 			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, player, {values})")),
 		}
@@ -501,23 +505,37 @@ impl<'a> ServerOutput<'a> {
 
 	fn push_callback_lists(&mut self) {
 		self.push_line(&format!(
-			"local events = table.create({})",
-			self.config.evdecls.len() + self.config.fndecls.len()
+			"local reliable_events = table.create({})",
+			self.config.server_reliable_count()
+		));
+
+		self.push_line(&format!(
+			"local unreliable_events = table.create({})",
+			self.config.server_unreliable_count()
 		));
 
 		for evdecl in self.config.evdecls.iter().filter(|ev_decl| {
 			ev_decl.from == EvSource::Client && matches!(ev_decl.call, EvCall::ManyAsync | EvCall::ManySync)
 		}) {
-			self.push_line(&format!("events[{}] = {{}}", evdecl.id));
+			match evdecl.evty {
+				EvType::Reliable => self.push_line(&format!("reliable_events[{}] = {{}}", evdecl.id)),
+				EvType::Unreliable => self.push_line(&format!("unreliable_events[{}] = {{}}", evdecl.id)),
+			}
 		}
 	}
 
-	fn push_write_event_id(&mut self, id: usize) {
-		self.push_line(&format!("alloc({})", self.config.event_id_ty().size()));
-		self.push_line(&format!(
-			"buffer.write{}(outgoing_buff, outgoing_apos, {id})",
-			self.config.event_id_ty()
-		));
+	fn push_write_event_id(&mut self, id: usize, num_ty: NumTy) {
+		self.push_line(&format!("alloc({})", num_ty.size()));
+		self.push_line(&format!("buffer.write{}(outgoing_buff, outgoing_apos, {id})", num_ty));
+	}
+
+	fn push_write_evdecl_event_id(&mut self, ev: &EvDecl) {
+		let num_ty = match ev.evty {
+			EvType::Reliable => self.config.server_reliable_ty(),
+			EvType::Unreliable => self.config.server_unreliable_ty(),
+		};
+
+		self.push_write_event_id(ev.id, num_ty);
 	}
 
 	fn push_value_parameters(&mut self, parameters: &[Parameter]) {
@@ -565,7 +583,7 @@ impl<'a> ServerOutput<'a> {
 			EvType::Unreliable => self.push_line("load_empty()"),
 		}
 
-		self.push_write_event_id(ev.id);
+		self.push_write_evdecl_event_id(ev);
 
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
@@ -606,7 +624,7 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line("load_empty()");
 
-		self.push_write_event_id(ev.id);
+		self.push_write_evdecl_event_id(ev);
 
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
@@ -661,7 +679,7 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line("load_empty()");
 
-		self.push_write_event_id(ev.id);
+		self.push_write_evdecl_event_id(ev);
 
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
@@ -728,7 +746,7 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line("load_empty()");
 
-		self.push_write_event_id(ev.id);
+		self.push_write_evdecl_event_id(ev);
 
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
@@ -787,7 +805,7 @@ impl<'a> ServerOutput<'a> {
 
 		self.push_line("load_empty()");
 
-		self.push_write_event_id(ev.id);
+		self.push_write_evdecl_event_id(ev);
 
 		if !parameters.is_empty() {
 			self.push_stmts(&ser::gen(
@@ -869,12 +887,12 @@ impl<'a> ServerOutput<'a> {
 		self.push(") -> ()): () -> ()\n");
 		self.indent();
 
-		self.push_line(&format!("events[{id}] = {callback}"));
+		self.push_line(&format!("{}[{id}] = {callback}", events_table_name(ev)));
 
 		self.push_line("return function()");
 		self.indent();
 
-		self.push_line(&format!("events[{id}] = nil"));
+		self.push_line(&format!("{}[{id}] = nil", events_table_name(ev)));
 
 		self.dedent();
 		self.push_line("end");
@@ -901,13 +919,15 @@ impl<'a> ServerOutput<'a> {
 		self.push(") -> ()): () -> ()\n");
 		self.indent();
 
-		self.push_line(&format!("table.insert(events[{id}], {callback})"));
+		let events_table = events_table_name(ev);
+
+		self.push_line(&format!("table.insert({events_table}[{id}], {callback})"));
 
 		self.push_line("return function()");
 		self.indent();
 
 		self.push_line(&format!(
-			"table.remove(events[{id}], table.find(events[{id}], {callback}))"
+			"table.remove({events_table}[{id}], table.find({events_table}[{id}], {callback}))",
 		));
 
 		self.dedent();
@@ -918,7 +938,7 @@ impl<'a> ServerOutput<'a> {
 	}
 
 	fn push_fn_return(&mut self, fndecl: &FnDecl) {
-		let id = fndecl.id;
+		let server_id = fndecl.server_id;
 
 		let set_callback = self.config.casing.with("SetCallback", "setCallback", "set_callback");
 		let callback = self.config.casing.with("Callback", "callback", "callback");
@@ -946,12 +966,12 @@ impl<'a> ServerOutput<'a> {
 		self.push(")): () -> ()\n");
 		self.indent();
 
-		self.push_line(&format!("events[{id}] = {callback}"));
+		self.push_line(&format!("reliable_events[{server_id}] = {callback}"));
 
 		self.push_line("return function()");
 		self.indent();
 
-		self.push_line(&format!("events[{id}] = nil"));
+		self.push_line(&format!("reliable_events[{server_id}] = nil"));
 
 		self.dedent();
 		self.push_line("end");
