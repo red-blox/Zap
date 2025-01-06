@@ -33,6 +33,8 @@ For users who wish to use Zap as a CLI, you can download the latest release from
 aftman add red-blox/zap
 ```
 
+You can also use Zap in Studio with the community-made [Zappy](https://github.com/Ultrasonic1209/Zappy/) plugin.
+
 Alternatively you can use the [web playground](https://zap.redblox.dev/playground) and move the generated files into your project.
 
 ## Writing Your First Network Description
