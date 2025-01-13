@@ -52,8 +52,8 @@ This field determines how the event is listened to on the receiving side.
 
 - `ManyAsync` events can be listened to by many functions, and they are called asynchronously.
 - `ManySync` events can be listened to by many functions, and they are called synchronously.
-- `SingleAsync` events can be listened to by one function, and they are called asynchronously.
-- `SingleSync` events can be listened to by one function, and they are called synchronously.
+- `SingleAsync` events can be listened to by one function per actor, and they are called asynchronously.
+- `SingleSync` events can be listened to by one function per actor, and they are called synchronously.
 
 ::: danger
 Synchronous events are not recommended, and should only be used when performance is critical.
