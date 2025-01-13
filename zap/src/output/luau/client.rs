@@ -242,9 +242,9 @@ impl<'src> ClientOutput<'src> {
 
 		match ev.call {
 			EvCall::SingleSync => self.push_line(&format!("events[{id}]({values})")),
-			EvCall::SingleAsync => self.push_line(&format!("task.spawn(events[{id}], {values})")),
+			EvCall::SingleAsync => self.push_line(&format!("1task.spawn(events[{id}], {values})")),
 			EvCall::ManySync => self.push_line(&format!("cb({values})")),
-			EvCall::ManyAsync => self.push_line(&format!("task.spawn(cb, {values})")),
+			EvCall::ManyAsync => self.push_line(&format!("2task.spawn(cb, {values})")),
 		}
 
 		if ev.call == EvCall::ManySync || ev.call == EvCall::ManyAsync {
@@ -323,7 +323,13 @@ impl<'src> ClientOutput<'src> {
 
 		match self.config.yield_type {
 			YieldType::Yield | YieldType::Future => {
-				self.push_line(&format!("task.spawn(event_queue[{id}][call_id], {values})"));
+				self.push_line(&format!("local thread = event_queue[{id}][call_id]"));
+				self.push_line("-- When using actors it's possible for multiple Zap clients to exist, but only one called the Zap remote function.");
+				self.push_line(&format!("if thread then"));
+				self.indent();
+				self.push_line(&format!("task.spawn(thread, {values})"));
+				self.dedent();
+				self.push_line("end");
 			}
 			YieldType::Promise => {
 				self.push_line(&format!("event_queue[{id}][call_id]({values})"));
