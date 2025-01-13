@@ -323,7 +323,13 @@ impl<'src> ClientOutput<'src> {
 
 		match self.config.yield_type {
 			YieldType::Yield | YieldType::Future => {
-				self.push_line(&format!("task.spawn(event_queue[{id}][call_id], {values})"));
+				self.push_line(&format!("local thread = event_queue[{id}][call_id]"));
+				self.push_line("-- When using actors it's possible for multiple Zap clients to exist, but only one called the Zap remote function.");
+				self.push_line(&format!("if thread then"));
+				self.indent();
+				self.push_line(&format!("task.spawn(thread, {values})"));
+				self.dedent();
+				self.push_line("end");
 			}
 			YieldType::Promise => {
 				self.push_line(&format!("event_queue[{id}][call_id]({values})"));
