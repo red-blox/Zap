@@ -31,10 +31,14 @@ impl<'src> Converter<'src> {
 					tydecls.insert(tydecl.name.name, tydecl.clone());
 				}
 
-				SyntaxDecl::Ev(ev_decl) => match ev_decl.from {
-					EvSource::Server => client_unreliable_event_count += 1,
-					EvSource::Client => server_unreliable_event_count += 1,
-				},
+				SyntaxDecl::Ev(ev_decl) => {
+					if ev_decl.evty == EvType::Unreliable {
+						match ev_decl.from {
+							EvSource::Server => client_unreliable_event_count += 1,
+							EvSource::Client => server_unreliable_event_count += 1,
+						}
+					}
+				}
 
 				_ => {}
 			}
