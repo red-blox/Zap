@@ -45,7 +45,8 @@ impl<'src> Converter<'src> {
 		}
 
 		// We subtract two for the `inst` array.
-		let max_unreliable_size = 1_000 - NumTy::from_f64(1.0, ntdecls as f64).size() - 2;
+		let max_server_unreliable_size = 1_000 - NumTy::from_f64(0.0, server_unreliable_event_count as f64).size() - 2;
+		let max_client_unreliable_size = 1_000 - NumTy::from_f64(0.0, client_unreliable_event_count as f64).size() - 2;
 
 		Self {
 			config,
