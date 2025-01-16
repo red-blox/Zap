@@ -104,22 +104,7 @@ The length of strings can be constrained by placing [a range](#as-a-recap) withi
 
 ## Unknown
 
-The keyword `unknown` represents data of a type that can't be known until runtime. For values that can be one of multiple known types, use [tagged enums](#tagged-enums) instead. You can then optionally refine the type or cast it:
-```lua
--- refining
-Zap.my_event.on(function(data: unknown)
-	if typeof(data) == "string" then
-		-- `data` takes `string` type
-	elseif typeof(data) == "number" then
-		-- `data` takes `number` type
-	end
-end)
-
--- casting
-Zap.other_event.on(function(data: unknown)
-	do_thing(data :: any)
-end)
-```
+The keyword `unknown` represents data of a type that can't be known until runtime. For values that can be one of multiple known types, use [tagged enums](#tagged-enums) instead.
 
 ## Arrays
 
