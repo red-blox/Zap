@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::config::{
-	Casing, Config, Enum, EvDecl, EvType, FnDecl, NumTy, Parameter, Range, Struct, Ty, TyDecl, YieldType,
+	Casing, Config, Enum, EvDecl, EvSource, EvType, FnDecl, NumTy, Parameter, Range, Struct, Ty, TyDecl, YieldType,
 };
 
 use super::{
@@ -12,7 +12,8 @@ use super::{
 struct Converter<'src> {
 	config: SyntaxConfig<'src>,
 	tydecls: HashMap<&'src str, SyntaxTyDecl<'src>>,
-	max_unreliable_size: usize,
+	max_server_unreliable_size: usize,
+	max_client_unreliable_size: usize,
 
 	reports: Vec<Report<'src>>,
 }
@@ -20,7 +21,9 @@ struct Converter<'src> {
 impl<'src> Converter<'src> {
 	fn new(config: SyntaxConfig<'src>) -> Self {
 		let mut tydecls = HashMap::new();
-		let mut ntdecls = 0;
+
+		let mut client_unreliable_event_count = 0;
+		let mut server_unreliable_event_count = 0;
 
 		for decl in config.decls.iter() {
 			match decl {
@@ -28,7 +31,16 @@ impl<'src> Converter<'src> {
 					tydecls.insert(tydecl.name.name, tydecl.clone());
 				}
 
-				SyntaxDecl::Ev(_) | SyntaxDecl::Fn(_) => ntdecls += 1,
+				SyntaxDecl::Ev(ev_decl) => {
+					if ev_decl.evty == EvType::Unreliable {
+						match ev_decl.from {
+							EvSource::Server => client_unreliable_event_count += 1,
+							EvSource::Client => server_unreliable_event_count += 1,
+						}
+					}
+				}
+
+				_ => {}
 			}
 		}
 
@@ -38,7 +50,8 @@ impl<'src> Converter<'src> {
 		Self {
 			config,
 			tydecls,
-			max_unreliable_size,
+			max_server_unreliable_size,
+			max_client_unreliable_size,
 
 			reports: Vec::new(),
 		}
@@ -53,7 +66,10 @@ impl<'src> Converter<'src> {
 		let mut evdecls = Vec::new();
 		let mut fndecls = Vec::new();
 
-		let mut ntdecl_id = 0;
+		let mut server_reliable_id = 0;
+		let mut server_unreliable_id = 0;
+		let mut client_reliable_id = 0;
+		let mut client_unreliable_id = 0;
 
 		for tydecl in config.decls.iter().filter_map(|decl| match decl {
 			SyntaxDecl::Ty(tydecl) => Some(tydecl),
@@ -71,16 +87,43 @@ impl<'src> Converter<'src> {
 			SyntaxDecl::Ev(evdecl) => Some(evdecl),
 			_ => None,
 		}) {
-			ntdecl_id += 1;
-			evdecls.push(self.evdecl(evdecl, ntdecl_id, &tydecl_hashmap));
+			let id = match evdecl.from {
+				EvSource::Server => match evdecl.evty {
+					EvType::Reliable => {
+						let current_id = client_reliable_id;
+						client_reliable_id += 1;
+						current_id
+					}
+					EvType::Unreliable => {
+						let current_id = client_unreliable_id;
+						client_unreliable_id += 1;
+						current_id
+					}
+				},
+				EvSource::Client => match evdecl.evty {
+					EvType::Reliable => {
+						let current_id = server_reliable_id;
+						server_reliable_id += 1;
+						current_id
+					}
+					EvType::Unreliable => {
+						let current_id = server_unreliable_id;
+						server_unreliable_id += 1;
+						current_id
+					}
+				},
+			};
+
+			evdecls.push(self.evdecl(evdecl, id, &tydecl_hashmap));
 		}
 
 		for fndecl in config.decls.iter().filter_map(|decl| match decl {
 			SyntaxDecl::Fn(fndecl) => Some(fndecl),
 			_ => None,
 		}) {
-			ntdecl_id += 1;
-			fndecls.push(self.fndecl(fndecl, ntdecl_id));
+			fndecls.push(self.fndecl(fndecl, client_reliable_id, server_reliable_id));
+			client_reliable_id += 1;
+			server_reliable_id += 1;
 		}
 
 		if evdecls.is_empty() && fndecls.is_empty() {
@@ -370,18 +413,23 @@ impl<'src> Converter<'src> {
 				}
 			}
 
-			if min > self.max_unreliable_size {
+			let max_unreliable_size = match from {
+				EvSource::Server => self.max_client_unreliable_size,
+				EvSource::Client => self.max_server_unreliable_size,
+			};
+
+			if min > max_unreliable_size {
 				self.report(Report::AnalyzeOversizeUnreliable {
 					ev_span: evdecl.span(),
 					ty_span: evdecl.data.as_ref().unwrap().span(),
-					max_size: self.max_unreliable_size,
+					max_size: max_unreliable_size,
 					size: min,
 				});
-			} else if !max.is_some_and(|max| max < self.max_unreliable_size) {
+			} else if max.is_none_or(|max| max >= max_unreliable_size) {
 				self.report(Report::AnalyzePotentiallyOversizeUnreliable {
 					ev_span: evdecl.span(),
 					ty_span: evdecl.data.as_ref().unwrap().span(),
-					max_size: self.max_unreliable_size,
+					max_size: max_unreliable_size,
 				});
 			}
 		}
@@ -396,7 +444,7 @@ impl<'src> Converter<'src> {
 		}
 	}
 
-	fn fndecl(&mut self, fndecl: &SyntaxFnDecl<'src>, id: usize) -> FnDecl<'src> {
+	fn fndecl(&mut self, fndecl: &SyntaxFnDecl<'src>, client_id: usize, server_id: usize) -> FnDecl<'src> {
 		if let Some(syntax_parameters) = &fndecl.args {
 			self.check_duplicate_parameters(syntax_parameters);
 		}
@@ -438,7 +486,8 @@ impl<'src> Converter<'src> {
 			args: args.unwrap_or_default(),
 			call,
 			rets,
-			id,
+			client_id,
+			server_id,
 		}
 	}
 
