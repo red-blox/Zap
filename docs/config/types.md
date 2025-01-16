@@ -102,6 +102,25 @@ The length of strings can be constrained by placing [a range](#as-a-recap) withi
 
 <CodeBlock code="string(3..20)" />
 
+## Unknown
+
+The keyword `unknown` represents data of an unknown type. You can then optionally refine the type or cast it:
+```lua
+-- refining
+Zap.my_event.on(function(data: unknown)
+	if typeof(data) == "string" then
+		-- `data` takes `string` type
+	elseif typeof(data) == "number" then
+		-- `data` takes `number` type
+	end
+end)
+
+-- casting
+Zap.other_event.on(function(data: unknown)
+	do_thing(data :: any)
+end)
+```
+
 ## Arrays
 
 Arrays are defined as a type followed by square brackets. For example an array of `u8`s would be:
