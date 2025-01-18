@@ -320,7 +320,9 @@ impl<'a> ServerOutput<'a> {
 			self.push_line(&format!("task.spawn(function(player_2, call_id_2, {args})"));
 			self.indent();
 
-			self.push_line(&format!("local {rets_string} = reliable_events[{server_id}](player_2, {args})"));
+			self.push_line(&format!(
+				"local {rets_string} = reliable_events[{server_id}](player_2, {args})"
+			));
 
 			self.push_line("load_player(player_2)");
 			self.push_write_event_id(fndecl.client_id, self.config.client_reliable_ty());
