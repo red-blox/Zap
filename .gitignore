@@ -5,7 +5,7 @@ network
 net.zap
 
 # Tests
-zap/tests/snapshots/*.snap.new
+**/*.snap.new
 
 # Docs
 docs/.vitepress/dist

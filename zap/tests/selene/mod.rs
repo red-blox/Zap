@@ -1,50 +1,55 @@
-use std::{fs, path::PathBuf, sync::LazyLock};
+mod checker;
 
-use full_moon::LuaVersion;
+use std::{borrow::Cow, fs, sync::LazyLock};
+
+use checker::{initialise_selene, Selene};
 use insta::{assert_debug_snapshot, glob, Settings};
-use selene_lib::{lints::Severity, Checker};
 
-static CHECKER: LazyLock<Checker<toml::value::Value>> = LazyLock::new(|| {
-	let working_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+static SELENE: LazyLock<Selene> = LazyLock::new(initialise_selene);
 
-	let standard_library_path = working_dir.join("roblox.yml");
-	let standard_library_file = fs::read_to_string(standard_library_path).expect("Unable to read the standard library");
-	let standard_library = serde_yml::from_str(&standard_library_file).expect("Unable to parse the standard library");
+pub fn run_selene_test(input: &str, no_warnings: bool, insta_settings: &mut Settings, file_stem: Cow<'_, str>) {
+	let code = zap::run(input, no_warnings)
+		.code
+		.expect("Zap did not generate any code!");
 
-	let config_path = working_dir.join("selene.toml");
-	let config_file = fs::read_to_string(config_path).expect("Unable to read selene.toml");
-	let config = toml::from_str(&config_file).expect("Unable to decode selene.toml");
+	let client_ast = full_moon::parse_fallible(&code.client.code, SELENE.lua_version).into_ast();
+	let client_diagnostics = SELENE.linter.test_on(&client_ast);
 
-	Checker::new(config, standard_library).expect("Unable to initialise selene!")
-});
-
-pub fn run_selene_test(input: &str, no_warnings: bool, insta_settings: Settings) {
-	let generated_code = zap::run(input, no_warnings);
-
-	let client_ast = full_moon::parse_fallible(&generated_code.code.unwrap().client.code, LuaVersion::luau())
-		.into_result()
-		.expect("Unable to parse code!");
-	let client_diagnostics = CHECKER.test_on(&client_ast);
-
+	insta_settings.set_snapshot_suffix(format!("{file_stem}@client"));
 	insta_settings.bind(|| {
 		assert_debug_snapshot!(client_diagnostics);
-		assert!(client_diagnostics
-			.iter()
-			.all(|diagnostic| diagnostic.severity != Severity::Error));
 	});
+
+	let server_ast = full_moon::parse_fallible(&code.server.code, SELENE.lua_version).into_ast();
+	let server_diagnostics = SELENE.linter.test_on(&server_ast);
+
+	insta_settings.set_snapshot_suffix(format!("{file_stem}@server"));
+	insta_settings.bind(|| {
+		assert_debug_snapshot!(server_diagnostics);
+	});
+
+	if let Some(tooling) = code.tooling {
+		let tooling_ast = full_moon::parse_fallible(&tooling.code, SELENE.lua_version).into_ast();
+		let tooling_diagnostics = SELENE.linter.test_on(&tooling_ast);
+
+		insta_settings.set_snapshot_suffix(format!("{file_stem}@tooling"));
+		insta_settings.bind(|| {
+			assert_debug_snapshot!(tooling_diagnostics);
+		});
+	}
 }
 
 #[test]
 fn test_lints() {
 	glob!(env!("CARGO_MANIFEST_DIR"), "tests/files/*.zap", |path| {
 		let input = fs::read_to_string(path).unwrap();
+		let file_stem = path.file_stem().unwrap().to_string_lossy();
 
 		let mut insta_settings = Settings::new();
 		insta_settings.set_prepend_module_to_snapshot(false);
 		insta_settings.set_sort_maps(true);
 		insta_settings.set_input_file(path);
-		insta_settings.set_snapshot_suffix(path.file_stem().unwrap().to_string_lossy());
 
-		run_selene_test(&input, true, insta_settings)
+		run_selene_test(&input, true, &mut insta_settings, file_stem)
 	});
 }
