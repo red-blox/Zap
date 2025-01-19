@@ -18,3 +18,13 @@ codespan-reporting = "0.11.0"
 lalrpop-util = "0.20.0"
 num-traits = "0.2.17"
 wasm-bindgen = "0.2"
+
+[dev-dependencies]
+anyhow = "1.0"
+full_moon = { version = "1.2.0", features = ["luau"] }
+insta = { version = "1.42.0", features = ["glob"] }
+lune = { git = "https://github.com/lune-org/lune.git", rev = "5d1401cdf611cc9f215f03bdf16ada0e77717edf" }
+selene-lib = "0.28.0"
+serde_yml = "0.0.12"
+tokio = { version = "1", features = ["full"] }
+toml = "0.8.19"

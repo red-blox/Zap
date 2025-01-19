@@ -4,6 +4,9 @@ target
 network
 net.zap
 
+# Tests
+**/*.snap.new
+
 # Docs
 docs/.vitepress/dist
 docs/.vitepress/cache
@@ -14,6 +17,3 @@ zap/package
 
 # Mac Moment
 .DS_Store
-
-# Editor Stuff
-.vscode/

@@ -1,0 +1,40 @@
+base: luau
+name: polyfill
+globals:
+  CFrame.Angles:
+    args:
+    - required: false
+      type: number
+    - required: false
+      type: number
+    - required: false
+      type: number
+    must_use: true
+  game:
+    struct: DataModel
+  Instance.new:
+    args:
+    - type:
+      - Folder
+      - RemoteEvent
+      - UnreliableRemoteEvent
+  task.spawn:
+    args:
+    - type: function
+    - required: false
+      type: '...'
+  warn:
+    args:
+    - type: any
+    - required: false
+      type: '...'
+structs:
+  DataModel:
+    GetService:
+      args:
+      - type:
+        - ReplicatedStorage
+        - RunService
+        - Players
+      method: true
+      must_use: true

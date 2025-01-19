@@ -1,2 +1,6 @@
 [workspace]
 members = ["zap", "cli"]
+
+# Due to full-moon stack overflowing in debug mode :(
+[profile.test]
+inherits = "release"
