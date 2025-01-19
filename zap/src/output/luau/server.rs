@@ -340,7 +340,9 @@ impl<'a> ServerOutput<'a> {
 			self.dedent();
 			self.push_line(&format!("end, player, call_id, {values})"));
 		} else {
-			self.push_line(&format!("local {rets_string} = reliable_events[{server_id}](player, {values})"));
+			self.push_line(&format!(
+				"local {rets_string} = reliable_events[{server_id}](player, {values})"
+			));
 
 			self.push_line("load_player(player)");
 			self.push_write_event_id(fndecl.client_id, self.config.client_reliable_ty());
